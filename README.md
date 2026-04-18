@@ -1,4 +1,4 @@
-# Planning Personnel
+# Mon Petit Planning
 
 Outil statique permettant d'extraire et d'imprimer un planning individuel à partir d'un fichier Excel multi-feuilles.
 
