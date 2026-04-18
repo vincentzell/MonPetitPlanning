@@ -4,54 +4,77 @@
     <meta charset="UTF-8">
     <title>Mon Petit Planning</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         :root {
-            --bg-color: #f4f7f6;
-            --card-bg: white;
-            --text-color: #333;
-            --border-color: #ddd;
+            --bg-color: #f4f7f6; --card-bg: white; --text-color: #333; --border-color: #ddd; --accent-color: #0056b3; --drop-bg: #f8f9fa;
+            /* Adapté au thème clair (discret) */
+            --btn-theme-bg: #e9ecef; --btn-theme-text: #495057;
         }
-
         body.dark-mode {
-            --bg-color: #1a1a1a;
-            --card-bg: #2d2d2d;
-            --text-color: #e0e0e0;
-            --border-color: #444;
+            --bg-color: #1a1a1a; --card-bg: #2d2d2d; --text-color: #e0e0e0; --border-color: #444; --accent-color: #3d8bfd; --drop-bg: #383838;
+            /* Adapté au thème sombre (discret) */
+            --btn-theme-bg: #3d3d3d; --btn-theme-text: #ced4da;
         }
-
         body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 10px; background-color: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
         
-        .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .no-print { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid transparent; }
+        .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         
-        .no-print { background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .hidden { display: none; }
+        /* Bouton Thème Adapté (plus de contraste violent) */
+        .btn-theme { 
+            width: auto !important; 
+            background: var(--btn-theme-bg) !important; 
+            color: var(--btn-theme-text) !important; 
+            padding: 8px 16px; 
+            font-size: 0.85em; 
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .btn-theme:hover { filter: brightness(1.1); }
+
+        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: background 0.3s, border-color 0.3s; }
+        .hidden { display: none !important; }
         
-        select, input { padding: 10px; margin: 5px 0; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
-        button { padding: 10px; margin: 5px 0; width: 100%; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: opacity 0.2s; }
+        select, input[type="date"] { padding: 10px; margin: 8px 0 15px 0; width: 100%; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
+        button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: transform 0.1s, opacity 0.2s; }
         
-        .btn-gen { background: #28a745; }
+        .btn-gen { background: #28a745; margin-top: 15px; }
         .btn-print { background: #0056b3; }
-        .btn-dark { width: auto; background: #6c757d; padding: 5px 15px; font-size: 0.8em; }
 
-        .user-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; border-bottom: 1.5pt solid #000; display: block; width: 100%; color: #000; }
-        .version-date { font-weight: normal; font-size: 0.85em; float: right; }
+        .chk-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 10px 0; }
+        .chk-label { display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; color: var(--text-color); }
+        .sub-opts-box { margin: -5px 0 15px 25px; padding: 8px 15px; border-left: 2px solid var(--accent-color); display: flex; gap: 20px; background: rgba(0,0,0,0.05); border-radius: 0 6px 6px 0; }
 
-        .planning-table { width: 100%; border-collapse: collapse; margin-bottom: 9px; table-layout: fixed; page-break-inside: avoid; background: white; color: black; }
-        .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.8em; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .planning-table th, .planning-table td { border: 1pt solid #000 !important; padding: 4px 1px; text-align: center; }
+        #output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .print-page { display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; page-break-after: always; box-sizing: border-box; padding: 2mm 0; }
+        .print-page:last-child { justify-content: flex-start !important; height: auto; min-height: 10cm; gap: 20px; }
+        
+        .print-header { display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto; padding-bottom: 3px; align-items: baseline; justify-content: space-between; }
+        .h-col-left { flex: 1; text-align: left; font-size: 1.1em; font-weight: bold; white-space: nowrap; }
+        .h-col-center { flex: 1; text-align: center; font-size: 0.9em; font-weight: normal; }
+        .h-col-right { flex: 1; text-align: right; font-size: 0.7em; font-weight: normal; color: #444; }
+
+        .planning-container { width: 100%; page-break-inside: avoid; }
+        .planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; box-sizing: border-box; }
+        .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.8em; font-weight: bold; -webkit-print-color-adjust: exact; }
+        .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 3px 1px; text-align: center; box-sizing: border-box; }
+        .planning-table th:first-child, .planning-table td:first-child { border-left: 1pt solid #000; }
+        .planning-table tr:first-child th { border-top: 1pt solid #000; }
+        
         .jour-nom { font-size: 0.75em; color: #333; display: block; }
         .poste-valeur { font-weight: bold; font-size: 1.05em; display: block; }
-        .row-notes { height: 38px; background: #fff !important; }
-
-        #output { background: white; padding: 10px; border-radius: 4px; color: black; }
+        .row-notes { height: 45px; background: #fff !important; }
 
         @media print {
-            @page { margin: 0.7cm 0.7cm; size: portrait; }
+            @page { margin: 0.5cm 0.7cm; size: portrait; }
             body { background: white !important; padding: 0; margin: 0; }
             .no-print { display: none !important; }
-            #output { padding: 0; }
-            .planning-table { margin-bottom: 9px !important; }
-            .row-notes { height: 38px !important; }
+            #output { padding: 0; box-shadow: none; }
+            .print-header { display: flex !important; }
         }
     </style>
 </head>
@@ -60,103 +83,188 @@
     <div id="setup" class="no-print">
         <div class="header-box">
             <h2 style="margin:0">Mon Petit Planning</h2>
-            <button class="btn-dark" onclick="toggleDarkMode()">🌓 Mode Sombre</button>
+            <button id="themeBtn" class="btn-theme" onclick="toggleDarkMode()">🌑 Mode Sombre</button>
         </div>
-        <input type="file" id="fileInput" accept=".xlsx">
+
+        <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+            <span id="dropText">📂 Cliquez ou glissez votre planning Excel ici</span>
+            <input type="file" id="fileInput" accept=".xlsx" class="hidden">
+        </div>
+
         <div id="step2" class="hidden">
-            <select id="userSelect"></select>
-            <div style="display: flex; gap: 10px;">
-                <input type="date" id="dateStart">
-                <input type="date" id="dateEnd">
+            <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                <label style="font-size: 0.9em; font-weight: bold;">1. Qui êtes-vous ?</label>
+                <select id="userSelect" class="auto-refresh"></select>
+                
+                <label style="font-size: 0.9em; font-weight: bold;">2. Période à extraire</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="dateStart" class="auto-refresh">
+                    <input type="date" id="dateEnd" class="auto-refresh">
+                </div>
+
+                <label style="font-size: 0.9em; font-weight: bold;">3. Options d'affichage</label>
+                <div class="opt-section">
+                    <div class="chk-group">
+                        <label class="chk-label"><input type="checkbox" id="chkShowTitle" class="auto-refresh" checked onchange="handleMainTitleChange()"> Afficher le titre</label>
+                        <label class="chk-label"><input type="checkbox" id="chkShowPeriod" class="auto-refresh" checked> Afficher la période</label>
+                        <label class="chk-label"><input type="checkbox" id="chkShowDate" class="auto-refresh" checked> Date du fichier source</label>
+                    </div>
+                    
+                    <div id="subTitleBox" class="sub-opts-box">
+                        <label class="chk-label"><input type="checkbox" id="chkShowLast" class="auto-refresh" checked onchange="handleSubClick()"> Nom</label>
+                        <label class="chk-label"><input type="checkbox" id="chkShowFirst" class="auto-refresh" checked onchange="handleSubClick()"> Prénom</label>
+                    </div>
+                </div>
+
+                <button class="btn-gen" onclick="boutonGenererAction()">🗓️ Afficher le planning</button>
+                <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer le planning</button>
             </div>
-            <button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
-            <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer le planning</button>
         </div>
     </div>
 
-    <div id="output"></div>
-    <div id="print-bottom-container" class="no-print hidden">
-        <button class="btn-print" onclick="window.print()">🖨️ Imprimer le planning</button>
-    </div>
+    <div id="output" class="hidden"></div>
 
     <script>
-        let workbookData = null;
-        let fileDate = "";
+        let workbookData = null; let fileDate = ""; let isGenerated = false;
         const MOIS_LISTE = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
-        if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-mode');
+        function updateThemeButton() {
+            const btn = document.getElementById('themeBtn');
+            if (document.body.classList.contains('dark-mode')) {
+                btn.innerHTML = "☀️ Mode Clair";
+            } else {
+                btn.innerHTML = "🌑 Mode Sombre";
+            }
+        }
+
+        function savePrefs() {
+            const prefs = {
+                darkMode: document.body.classList.contains('dark-mode'),
+                user: document.getElementById('userSelect').value,
+                showTitle: document.getElementById('chkShowTitle').checked,
+                showPeriod: document.getElementById('chkShowPeriod').checked,
+                showDate: document.getElementById('chkShowDate').checked,
+                showLast: document.getElementById('chkShowLast').checked,
+                showFirst: document.getElementById('chkShowFirst').checked
+            };
+            localStorage.setItem('planning_prefs', JSON.stringify(prefs));
+        }
+
+        function loadPrefs() {
+            const saved = localStorage.getItem('planning_prefs');
+            if (!saved) return;
+            const prefs = JSON.parse(saved);
+            if (prefs.darkMode) document.body.classList.add('dark-mode');
+            updateThemeButton();
+            document.getElementById('chkShowTitle').checked = prefs.showTitle;
+            document.getElementById('chkShowPeriod').checked = prefs.showPeriod;
+            document.getElementById('chkShowDate').checked = prefs.showDate;
+            document.getElementById('chkShowLast').checked = prefs.showLast;
+            document.getElementById('chkShowFirst').checked = prefs.showFirst;
+            handleMainTitleChange();
+            return prefs.user;
         }
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
-            if (document.body.classList.contains('dark-mode')) {
-                localStorage.setItem('theme', 'dark');
-            } else {
-                localStorage.setItem('theme', 'light');
+            updateThemeButton();
+            savePrefs();
+        }
+
+        function initAutoRefresh() {
+            document.querySelectorAll('.auto-refresh').forEach(el => {
+                el.addEventListener('change', () => {
+                    savePrefs();
+                    if (workbookData && isGenerated) genererPlanning();
+                });
+            });
+        }
+        
+        window.onload = () => { initAutoRefresh(); loadPrefs(); };
+
+        function handleMainTitleChange() {
+            const isChecked = document.getElementById('chkShowTitle').checked;
+            document.getElementById('subTitleBox').classList.toggle('hidden', !isChecked);
+        }
+
+        function handleSubClick() {
+            if (!document.getElementById('chkShowLast').checked && !document.getElementById('chkShowFirst').checked) {
+                document.getElementById('chkShowTitle').checked = false;
+                handleMainTitleChange();
             }
         }
 
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR', {
-                    day: '2-digit', month: '2-digit', year: 'numeric'
-                });
-            }
+        document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+        function handleFile(file) {
+            isGenerated = false;
+            fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR');
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                workbookData = XLSX.read(data, {type: 'array', cellDates: true});
-                analyserNoms(workbookData);
+            reader.onload = ev => {
+                workbookData = XLSX.read(new Uint8Array(ev.target.result), {type: 'array', cellDates: true});
+                const nomsMap = new Map();
+                workbookData.SheetNames.forEach(sheetName => {
+                    if (MOIS_LISTE.some(m => sheetName.toLowerCase().includes(m))) {
+                        const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
+                        for(let i=3; i<25; i++) {
+                            if(data[i] && data[i][0]) {
+                                const rawName = data[i][0].toString().trim();
+                                const upperName = rawName.toUpperCase();
+                                if(!nomsMap.has(upperName)) nomsMap.set(upperName, rawName);
+                            }
+                        }
+                    }
+                });
+                if (nomsMap.size === 0) { alert("Aucun employé trouvé."); return; }
+                const select = document.getElementById('userSelect');
+                const sortedDisplayNames = Array.from(nomsMap.values()).sort();
+                select.innerHTML = sortedDisplayNames.map(n => `<option value="${n}">${n}</option>`).join('');
+                const savedUser = loadPrefs();
+                if (savedUser) {
+                    const found = sortedDisplayNames.find(n => n.toUpperCase() === savedUser.toUpperCase());
+                    if (found) select.value = found;
+                }
+                document.getElementById('step2').classList.remove('hidden');
+                document.getElementById('dropText').innerHTML = "<b>Fichier chargé :</b> " + file.name;
+                document.getElementById('output').classList.add('hidden');
             };
             reader.readAsArrayBuffer(file);
-        });
-
-        function analyserNoms(wb) {
-            const noms = new Set();
-            const premierMois = wb.SheetNames.find(name => MOIS_LISTE.some(m => name.toLowerCase().includes(m)));
-            if (!premierMois) return;
-            const data = XLSX.utils.sheet_to_json(wb.Sheets[premierMois], {header: 1});
-            for (let i = 3; i <= 25; i++) {
-                if (data[i] && data[i][0]) {
-                    const nom = data[i][0].toString().trim();
-                    if (nom.length > 2) noms.add(nom);
-                }
-            }
-            const select = document.getElementById('userSelect');
-            select.innerHTML = '<option value="">-- Sélectionnez votre nom --</option>';
-            Array.from(noms).sort().forEach(n => {
-                const opt = document.createElement('option');
-                opt.value = n; opt.textContent = n;
-                select.appendChild(opt);
-            });
-            document.getElementById('step2').classList.remove('hidden');
         }
 
+        function boutonGenererAction() { isGenerated = true; genererPlanning(); }
+
         function genererPlanning() {
-            const nomCible = document.getElementById('userSelect').value;
-            const start = new Date(document.getElementById('dateStart').value);
-            const end = new Date(document.getElementById('dateEnd').value);
-            if(!nomCible || isNaN(start) || isNaN(end)) return;
-            
-            let planningData = [];
+            const nomSelect = document.getElementById('userSelect').value;
+            const nomSelectUpper = nomSelect.toUpperCase();
+            const startVal = document.getElementById('dateStart').value;
+            const endVal = document.getElementById('dateEnd').value;
+            const start = new Date(startVal); const end = new Date(endVal);
+            const showTitle = document.getElementById('chkShowTitle').checked;
+            const showPeriod = document.getElementById('chkShowPeriod').checked;
+            const showDate = document.getElementById('chkShowDate').checked;
+
+            const parts = nomSelect.split(' ');
+            const nom = parts[0]; const prenom = parts.slice(1).join(' ');
+            let titreAffiche = "Planning : ";
+            if(document.getElementById('chkShowLast').checked && showTitle) titreAffiche += nom + " ";
+            if(document.getElementById('chkShowFirst').checked && showTitle) titreAffiche += prenom;
+            const periodeTexte = (startVal && endVal) ? `Du ${start.toLocaleDateString()} au ${end.toLocaleDateString()}` : "";
+
+            let allDays = [];
             workbookData.SheetNames.forEach(sheetName => {
-                const moisIndex = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
-                if (moisIndex === -1) return;
+                const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
+                if (moisIdx === -1) return;
                 const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
-                let dateRowIndex = data.findIndex(r => r && r.some(c => typeof c === 'string' && c.toLowerCase().includes('lundi')));
-                if (dateRowIndex === -1) return;
-                for (let i = 3; i <= 25; i++) {
-                    const row = data[i];
-                    if (row && row[0] === nomCible) {
-                        row.forEach((cell, colIdx) => {
-                            if (colIdx >= 2 && cell && cell.toString().trim() !== "") {
-                                const labelDate = data[dateRowIndex][colIdx];
-                                const jourMatch = labelDate ? labelDate.toString().match(/\d+/) : null;
-                                if (jourMatch) {
-                                    const d = new Date(2026, moisIndex, parseInt(jourMatch[0]));
-                                    if (d >= start && d <= end) planningData.push({ date: d, poste: cell });
+                const dRow = data.findIndex(r => r && r.some(c => typeof c === 'string' && c.toLowerCase().includes('lundi')));
+                if (dRow === -1) return;
+                for(let i=3; i<25; i++) {
+                    if(data[i] && data[i][0] && data[i][0].toString().trim().toUpperCase() === nomSelectUpper) {
+                        data[i].forEach((cell, cIdx) => {
+                            if(cIdx >= 2 && cell && data[dRow][cIdx]) {
+                                const m = data[dRow][cIdx].toString().match(/\d+/);
+                                if(m) {
+                                    const d = new Date(2026, moisIdx, parseInt(m[0]));
+                                    if((!startVal || d >= start) && (!endVal || d <= end)) allDays.push({date: d, poste: cell});
                                 }
                             }
                         });
@@ -164,56 +272,40 @@
                 }
             });
 
-            planningData.sort((a, b) => a.date - b.date);
+            allDays.sort((a,b) => a.date - b.date);
+            if(allDays.length === 0) { document.getElementById('output').innerHTML = "Aucune donnée."; return; }
             
-            let html = `
-                <div class="user-title">
-                    Planning : ${nomCible}
-                    <span class="version-date">Fichier du : ${fileDate}</span>
-                </div>`;
-
-            let currentWeek = [];
-            planningData.forEach((item, index) => {
-                currentWeek.push(item);
-                if (item.date.getDay() === 0 || index === planningData.length - 1) {
-                    html += buildWeekTable(currentWeek);
-                    currentWeek = [];
-                }
+            let weeks = [], temp = [];
+            allDays.forEach((item, i) => {
+                temp.push(item);
+                if(item.date.getDay() === 0 || i === allDays.length - 1) { weeks.push([...temp]); temp = []; }
             });
 
-            document.getElementById('btnPrintTop').classList.remove('hidden');
-            document.getElementById('print-bottom-container').classList.remove('hidden');
+            let html = "";
+            for(let i=0; i<weeks.length; i += 8) {
+                const chunk = weeks.slice(i, i + 8);
+                html += `<div class="print-page">
+                    <div class="print-header">
+                        <div class="h-col-left">${showTitle ? titreAffiche : ''}</div>
+                        <div class="h-col-center">${(showPeriod && periodeTexte) ? periodeTexte : ''}</div>
+                        <div class="h-col-right">${showDate ? 'Fichier du : ' + fileDate : ''}</div>
+                    </div>`;
+                chunk.forEach(w => {
+                    const d1 = w[0].date.toLocaleDateString(); const d2 = w[w.length-1].date.toLocaleDateString();
+                    let map = {1:null, 2:null, 3:null, 4:null, 5:null, 6:null, 0:null};
+                    w.forEach(s => map[s.date.getDay()] = s);
+                    html += `<div class="planning-container"><table class="planning-table"><thead><tr class="planning-header-row"><th colspan="7">Semaine du ${d1} au ${d2}</th></tr></thead><tbody><tr>`;
+                    [1,2,3,4,5,6,0].forEach(j => {
+                        const info = map[j];
+                        html += `<td><span class="jour-nom">${["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"][j]} ${info?info.date.getDate():''}</span><span class="poste-valeur">${info?info.poste:'-'}</span></td>`;
+                    });
+                    html += `</tr><tr class="row-notes"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div>`;
+                });
+                html += `</div>`;
+            }
             document.getElementById('output').innerHTML = html;
-        }
-
-        function buildWeekTable(semaine) {
-            const d1 = semaine[0].date.toLocaleDateString();
-            const d2 = semaine[semaine.length - 1].date.toLocaleDateString();
-            let mapping = {1:null, 2:null, 3:null, 4:null, 5:null, 6:null, 0:null};
-            semaine.forEach(s => { mapping[s.date.getDay()] = s; });
-
-            let tableHtml = `<table class="planning-table">
-                <thead>
-                    <tr class="planning-header-row">
-                        <th colspan="7">Semaine du ${d1} au ${d2}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>`;
-
-            [1, 2, 3, 4, 5, 6, 0].forEach(j => {
-                const info = mapping[j];
-                const nomJour = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][j];
-                tableHtml += `<td>
-                    <span class="jour-nom">${nomJour} ${info ? info.date.getDate() : ''}</span>
-                    <span class="poste-valeur">${info ? info.poste : '-'}</span>
-                </td>`;
-            });
-
-            tableHtml += `</tr><tr class="row-notes">`;
-            [1, 2, 3, 4, 5, 6, 0].forEach(() => tableHtml += `<td></td>`);
-            tableHtml += `</tr></tbody></table>`;
-            return tableHtml;
+            document.getElementById('output').classList.remove('hidden');
+            document.getElementById('btnPrintTop').classList.remove('hidden');
         }
     </script>
 </body>
