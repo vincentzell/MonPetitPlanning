@@ -2,149 +2,219 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Extracteur de Planning Ambulancier</title>
+    <title>Mon Petit Planning</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 30px auto; padding: 20px; color: #333; }
-        .step { background: #fff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        h2 { color: #0056b3; margin-top: 0; }
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: white;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --border-color: #444;
+        }
+
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 10px; background-color: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
+        
+        .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        .no-print { background: var(--card-bg); border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .hidden { display: none; }
-        select, input, button { padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #0056b3; }
-        .grid-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
-        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: left; }
-        th { background: #f8f9fa; color: #495057; }
-        tr:nth-child(even) { background-color: #fcfcfc; }
-        @media print { .no-print { display: none; } .step { border: none; box-shadow: none; } }
+        
+        select, input { padding: 10px; margin: 5px 0; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
+        button { padding: 10px; margin: 5px 0; width: 100%; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: opacity 0.2s; }
+        
+        .btn-gen { background: #28a745; }
+        .btn-print { background: #0056b3; }
+        .btn-dark { width: auto; background: #6c757d; padding: 5px 15px; font-size: 0.8em; }
+
+        .user-title { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; border-bottom: 1.5pt solid #000; display: block; width: 100%; color: #000; }
+        .version-date { font-weight: normal; font-size: 0.85em; float: right; }
+
+        .planning-table { width: 100%; border-collapse: collapse; margin-bottom: 9px; table-layout: fixed; page-break-inside: avoid; background: white; color: black; }
+        .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.8em; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .planning-table th, .planning-table td { border: 1pt solid #000 !important; padding: 4px 1px; text-align: center; }
+        .jour-nom { font-size: 0.75em; color: #333; display: block; }
+        .poste-valeur { font-weight: bold; font-size: 1.05em; display: block; }
+        .row-notes { height: 38px; background: #fff !important; }
+
+        #output { background: white; padding: 10px; border-radius: 4px; color: black; }
+
+        @media print {
+            @page { margin: 0.7cm 0.7cm; size: portrait; }
+            body { background: white !important; padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+            #output { padding: 0; }
+            .planning-table { margin-bottom: 9px !important; }
+            .row-notes { height: 38px !important; }
+        }
     </style>
 </head>
 <body>
 
-    <h1 class="no-print">📅 Mon Planning Personnel</h1>
-
-    <div id="step1" class="step no-print">
-        <h2>1. Charger le planning global</h2>
+    <div id="setup" class="no-print">
+        <div class="header-box">
+            <h2 style="margin:0">Mon Petit Planning</h2>
+            <button class="btn-dark" onclick="toggleDarkMode()">🌓 Mode Sombre</button>
+        </div>
         <input type="file" id="fileInput" accept=".xlsx">
-        <p><small>Le fichier reste sur votre ordinateur (traitement local).</small></p>
-    </div>
-
-    <div id="step2" class="step no-print hidden">
-        <h2>2. Qui êtes-vous ?</h2>
-        <select id="userSelect"></select>
-    </div>
-
-    <div id="step3" class="step no-print hidden">
-        <h2>3. Période souhaitée</h2>
-        <div class="grid-dates">
-            <div>
-                <label>Du :</label>
+        <div id="step2" class="hidden">
+            <select id="userSelect"></select>
+            <div style="display: flex; gap: 10px;">
                 <input type="date" id="dateStart">
-            </div>
-            <div>
-                <label>Au :</label>
                 <input type="date" id="dateEnd">
             </div>
+            <button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
+            <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer le planning</button>
         </div>
-        <button onclick="genererPlanning()">Générer mon planning</button>
     </div>
 
     <div id="output"></div>
+    <div id="print-bottom-container" class="no-print hidden">
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimer le planning</button>
+    </div>
 
-<script>
-let workbookData = null;
-const moisMapping = {
-    "janvier": 0, "février": 1, "mars": 2, "avril": 3, "mai": 4, "juin": 5,
-    "juillet": 6, "août": 7, "septembre": 8, "octobre": 9, "novembre": 10, "décembre": 11
-};
+    <script>
+        let workbookData = null;
+        let fileDate = "";
+        const MOIS_LISTE = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
-// --- GESTION DE L'UPLOAD ---
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        workbookData = XLSX.read(data, {type: 'array'});
-        
-        // Extraire la liste des employés depuis le premier onglet mensuel trouvé
-        extraireEmployes(workbookData);
-    };
-    reader.readAsArrayBuffer(file);
-});
-
-function extraireEmployes(wb) {
-    const noms = new Set();
-    const premierMois = wb.SheetNames.find(n => moisMapping.hasOwnProperty(n.toLowerCase()));
-    
-    if(!premierMois) return alert("Format de fichier non reconnu.");
-
-    const sheet = wb.Sheets[premierMois];
-    const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
-
-    // On parcourt la colonne A (index 0) à partir de la ligne 4
-    json.forEach((row, i) => {
-        if(i > 3 && row[0] && row[0].toString().length > 3) {
-            noms.add(row[0].toString().trim());
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
         }
-    });
 
-    const select = document.getElementById('userSelect');
-    select.innerHTML = '<option value="">-- Choisissez votre nom --</option>';
-    Array.from(noms).sort().forEach(nom => {
-        const opt = document.createElement('option');
-        opt.value = nom;
-        opt.textContent = nom;
-        select.appendChild(opt);
-    });
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            if (document.body.classList.contains('dark-mode')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        }
 
-    document.getElementById('step2').classList.remove('hidden');
-    select.onchange = () => document.getElementById('step3').classList.remove('hidden');
-}
-
-// --- LOGIQUE DE GÉNÉRATION ---
-function genererPlanning() {
-    const nomCible = document.getElementById('userSelect').value;
-    const start = new Date(document.getElementById('dateStart').value);
-    const end = new Date(document.getElementById('dateEnd').value);
-
-    if(!nomCible || isNaN(start) || isNaN(end)) return alert("Veuillez remplir tous les champs.");
-
-    let html = `<h2>Planning de ${nomCible}</h2>`;
-    html += `<table><tr><th>Date</th><th>Code Poste</th></tr>`;
-
-    workbookData.SheetNames.forEach(sheetName => {
-        const moisNom = sheetName.toLowerCase();
-        if(!moisMapping.hasOwnProperty(moisNom)) return;
-
-        const sheet = workbookData.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
-        const datesRow = json[2]; // Ligne des jours (ex: lundi 5)
-
-        json.forEach(row => {
-            if(row[0] === nomCible) {
-                row.forEach((cell, colIndex) => {
-                    if(colIndex >= 8 && cell) {
-                        const dayStr = datesRow[colIndex];
-                        if(dayStr) {
-                            // Extraction du numéro du jour (ex: "lundi 5" -> 5)
-                            const dayNum = parseInt(dayStr.match(/\d+/));
-                            const dateCourante = new Date(2026, moisMapping[moisNom], dayNum);
-
-                            if(dateCourante >= start && dateCourante <= end) {
-                                html += `<tr><td>${dateCourante.toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'})}</td><td><strong>${cell}</strong></td></tr>`;
-                            }
-                        }
-                    }
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
                 });
             }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                workbookData = XLSX.read(data, {type: 'array', cellDates: true});
+                analyserNoms(workbookData);
+            };
+            reader.readAsArrayBuffer(file);
         });
-    });
 
-    html += `</table><br><button class="no-print" onclick="window.print()">🖨️ Imprimer mon planning</button>`;
-    document.getElementById('output').innerHTML = html;
-}
-</script>
+        function analyserNoms(wb) {
+            const noms = new Set();
+            const premierMois = wb.SheetNames.find(name => MOIS_LISTE.some(m => name.toLowerCase().includes(m)));
+            if (!premierMois) return;
+            const data = XLSX.utils.sheet_to_json(wb.Sheets[premierMois], {header: 1});
+            for (let i = 3; i <= 25; i++) {
+                if (data[i] && data[i][0]) {
+                    const nom = data[i][0].toString().trim();
+                    if (nom.length > 2) noms.add(nom);
+                }
+            }
+            const select = document.getElementById('userSelect');
+            select.innerHTML = '<option value="">-- Sélectionnez votre nom --</option>';
+            Array.from(noms).sort().forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n; opt.textContent = n;
+                select.appendChild(opt);
+            });
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        function genererPlanning() {
+            const nomCible = document.getElementById('userSelect').value;
+            const start = new Date(document.getElementById('dateStart').value);
+            const end = new Date(document.getElementById('dateEnd').value);
+            if(!nomCible || isNaN(start) || isNaN(end)) return;
+            
+            let planningData = [];
+            workbookData.SheetNames.forEach(sheetName => {
+                const moisIndex = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
+                if (moisIndex === -1) return;
+                const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
+                let dateRowIndex = data.findIndex(r => r && r.some(c => typeof c === 'string' && c.toLowerCase().includes('lundi')));
+                if (dateRowIndex === -1) return;
+                for (let i = 3; i <= 25; i++) {
+                    const row = data[i];
+                    if (row && row[0] === nomCible) {
+                        row.forEach((cell, colIdx) => {
+                            if (colIdx >= 2 && cell && cell.toString().trim() !== "") {
+                                const labelDate = data[dateRowIndex][colIdx];
+                                const jourMatch = labelDate ? labelDate.toString().match(/\d+/) : null;
+                                if (jourMatch) {
+                                    const d = new Date(2026, moisIndex, parseInt(jourMatch[0]));
+                                    if (d >= start && d <= end) planningData.push({ date: d, poste: cell });
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+
+            planningData.sort((a, b) => a.date - b.date);
+            
+            let html = `
+                <div class="user-title">
+                    Planning : ${nomCible}
+                    <span class="version-date">Fichier du : ${fileDate}</span>
+                </div>`;
+
+            let currentWeek = [];
+            planningData.forEach((item, index) => {
+                currentWeek.push(item);
+                if (item.date.getDay() === 0 || index === planningData.length - 1) {
+                    html += buildWeekTable(currentWeek);
+                    currentWeek = [];
+                }
+            });
+
+            document.getElementById('btnPrintTop').classList.remove('hidden');
+            document.getElementById('print-bottom-container').classList.remove('hidden');
+            document.getElementById('output').innerHTML = html;
+        }
+
+        function buildWeekTable(semaine) {
+            const d1 = semaine[0].date.toLocaleDateString();
+            const d2 = semaine[semaine.length - 1].date.toLocaleDateString();
+            let mapping = {1:null, 2:null, 3:null, 4:null, 5:null, 6:null, 0:null};
+            semaine.forEach(s => { mapping[s.date.getDay()] = s; });
+
+            let tableHtml = `<table class="planning-table">
+                <thead>
+                    <tr class="planning-header-row">
+                        <th colspan="7">Semaine du ${d1} au ${d2}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>`;
+
+            [1, 2, 3, 4, 5, 6, 0].forEach(j => {
+                const info = mapping[j];
+                const nomJour = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][j];
+                tableHtml += `<td>
+                    <span class="jour-nom">${nomJour} ${info ? info.date.getDate() : ''}</span>
+                    <span class="poste-valeur">${info ? info.poste : '-'}</span>
+                </td>`;
+            });
+
+            tableHtml += `</tr><tr class="row-notes">`;
+            [1, 2, 3, 4, 5, 6, 0].forEach(() => tableHtml += `<td></td>`);
+            tableHtml += `</tr></tbody></table>`;
+            return tableHtml;
+        }
+    </script>
 </body>
 </html>
