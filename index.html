@@ -2,18 +2,17 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Petit Planning</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="xlsx.full.min.js"></script>
     
     <style>
         :root {
             --bg-color: #f4f7f6; --card-bg: white; --text-color: #333; --border-color: #ddd; --accent-color: #0056b3; --drop-bg: #f8f9fa;
-            /* Adapté au thème clair (discret) */
             --btn-theme-bg: #e9ecef; --btn-theme-text: #495057;
         }
         body.dark-mode {
             --bg-color: #1a1a1a; --card-bg: #2d2d2d; --text-color: #e0e0e0; --border-color: #444; --accent-color: #3d8bfd; --drop-bg: #383838;
-            /* Adapté au thème sombre (discret) */
             --btn-theme-bg: #3d3d3d; --btn-theme-text: #ced4da;
         }
         body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 10px; background-color: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
@@ -21,22 +20,14 @@
         .no-print { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid transparent; }
         .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         
-        /* Bouton Thème Adapté (plus de contraste violent) */
         .btn-theme { 
-            width: auto !important; 
-            background: var(--btn-theme-bg) !important; 
-            color: var(--btn-theme-text) !important; 
-            padding: 8px 16px; 
-            font-size: 0.85em; 
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
+            width: auto !important; background: var(--btn-theme-bg) !important; color: var(--btn-theme-text) !important; 
+            padding: 8px 16px; font-size: 0.85em; border: 1px solid var(--border-color); border-radius: 6px; 
+            cursor: pointer; font-weight: 500; transition: all 0.2s ease; 
         }
         .btn-theme:hover { filter: brightness(1.1); }
 
-        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: background 0.3s, border-color 0.3s; }
+        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); }
         .hidden { display: none !important; }
         
         select, input[type="date"] { padding: 10px; margin: 8px 0 15px 0; width: 100%; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
@@ -51,17 +42,19 @@
 
         #output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .print-page { display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; page-break-after: always; box-sizing: border-box; padding: 2mm 0; }
+        
+        /* Correction justification dernière page */
         .print-page:last-child { justify-content: flex-start !important; height: auto; min-height: 10cm; gap: 20px; }
         
         .print-header { display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto; padding-bottom: 3px; align-items: baseline; justify-content: space-between; }
-        .h-col-left { flex: 1; text-align: left; font-size: 1.1em; font-weight: bold; white-space: nowrap; }
-        .h-col-center { flex: 1; text-align: center; font-size: 0.9em; font-weight: normal; }
-        .h-col-right { flex: 1; text-align: right; font-size: 0.7em; font-weight: normal; color: #444; }
+        .h-col-left { flex: 1; text-align: left; font-size: 1.1em; font-weight: bold; }
+        .h-col-center { flex: 1; text-align: center; font-size: 0.9em; }
+        .h-col-right { flex: 1; text-align: right; font-size: 0.7em; color: #444; }
 
         .planning-container { width: 100%; page-break-inside: avoid; }
-        .planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; box-sizing: border-box; }
+        .planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; }
         .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.8em; font-weight: bold; -webkit-print-color-adjust: exact; }
-        .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 3px 1px; text-align: center; box-sizing: border-box; }
+        .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 3px 1px; text-align: center; }
         .planning-table th:first-child, .planning-table td:first-child { border-left: 1pt solid #000; }
         .planning-table tr:first-child th { border-top: 1pt solid #000; }
         
@@ -130,11 +123,7 @@
 
         function updateThemeButton() {
             const btn = document.getElementById('themeBtn');
-            if (document.body.classList.contains('dark-mode')) {
-                btn.innerHTML = "☀️ Mode Clair";
-            } else {
-                btn.innerHTML = "🌑 Mode Sombre";
-            }
+            btn.innerHTML = document.body.classList.contains('dark-mode') ? "☀️ Mode Clair" : "🌑 Mode Sombre";
         }
 
         function savePrefs() {
@@ -165,11 +154,7 @@
             return prefs.user;
         }
 
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            updateThemeButton();
-            savePrefs();
-        }
+        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); updateThemeButton(); savePrefs(); }
 
         function initAutoRefresh() {
             document.querySelectorAll('.auto-refresh').forEach(el => {
@@ -238,7 +223,8 @@
             const nomSelectUpper = nomSelect.toUpperCase();
             const startVal = document.getElementById('dateStart').value;
             const endVal = document.getElementById('dateEnd').value;
-            const start = new Date(startVal); const end = new Date(endVal);
+            const start = startVal ? new Date(startVal) : null;
+            const end = endVal ? new Date(endVal) : null;
             const showTitle = document.getElementById('chkShowTitle').checked;
             const showPeriod = document.getElementById('chkShowPeriod').checked;
             const showDate = document.getElementById('chkShowDate').checked;
@@ -248,7 +234,7 @@
             let titreAffiche = "Planning : ";
             if(document.getElementById('chkShowLast').checked && showTitle) titreAffiche += nom + " ";
             if(document.getElementById('chkShowFirst').checked && showTitle) titreAffiche += prenom;
-            const periodeTexte = (startVal && endVal) ? `Du ${start.toLocaleDateString()} au ${end.toLocaleDateString()}` : "";
+            const periodeTexte = (start && end) ? `Du ${start.toLocaleDateString()} au ${end.toLocaleDateString()}` : "";
 
             let allDays = [];
             workbookData.SheetNames.forEach(sheetName => {
@@ -264,7 +250,7 @@
                                 const m = data[dRow][cIdx].toString().match(/\d+/);
                                 if(m) {
                                     const d = new Date(2026, moisIdx, parseInt(m[0]));
-                                    if((!startVal || d >= start) && (!endVal || d <= end)) allDays.push({date: d, poste: cell});
+                                    if((!start || d >= start) && (!end || d <= end)) allDays.push({date: d, poste: cell});
                                 }
                             }
                         });
@@ -273,7 +259,7 @@
             });
 
             allDays.sort((a,b) => a.date - b.date);
-            if(allDays.length === 0) { document.getElementById('output').innerHTML = "Aucune donnée."; return; }
+            if(allDays.length === 0) { document.getElementById('output').innerHTML = "<p style='text-align:center;'>Aucune donnée pour cette sélection.</p>"; return; }
             
             let weeks = [], temp = [];
             allDays.forEach((item, i) => {
@@ -288,7 +274,7 @@
                     <div class="print-header">
                         <div class="h-col-left">${showTitle ? titreAffiche : ''}</div>
                         <div class="h-col-center">${(showPeriod && periodeTexte) ? periodeTexte : ''}</div>
-                        <div class="h-col-right">${showDate ? 'Fichier du : ' + fileDate : ''}</div>
+                        <div class="h-col-right">${showDate ? 'Source : ' + fileDate : ''}</div>
                     </div>`;
                 chunk.forEach(w => {
                     const d1 = w[0].date.toLocaleDateString(); const d2 = w[w.length-1].date.toLocaleDateString();
