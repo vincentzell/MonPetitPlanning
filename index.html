@@ -2,75 +2,148 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Mon Extracteur de Planning</title>
+    <title>Extracteur de Planning Ambulancier</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; line-height: 1.6; }
-        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; background: #f9f9f9; }
-        input, button { padding: 10px; margin: 10px 0; width: 100%; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #eee; }
-        @media print { .no-print { display: none; } body { margin: 0; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 30px auto; padding: 20px; color: #333; }
+        .step { background: #fff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h2 { color: #0056b3; margin-top: 0; }
+        .hidden { display: none; }
+        select, input, button { padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #0056b3; }
+        .grid-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: left; }
+        th { background: #f8f9fa; color: #495057; }
+        tr:nth-child(even) { background-color: #fcfcfc; }
+        @media print { .no-print { display: none; } .step { border: none; box-shadow: none; } }
     </style>
 </head>
 <body>
 
-<div class="card no-print">
-    <h2>📅 Extracteur de Planning Ambulancier</h2>
-    <p>Sélectionnez votre fichier Excel 2026 pour isoler vos gardes.</p>
-    
-    <label>Votre Nom (exactement comme dans l'Excel) :</label>
-    <input type="text" id="userName" placeholder="Ex: RENAUDET Pascal" value="RENAUDET Pascal">
-    
-    <label>Fichier Planning (.xlsx) :</label>
-    <input type="file" id="fileInput" accept=".xlsx">
-    
-    <button onclick="traiterFichier()">Générer mon planning imprimable</button>
-</div>
+    <h1 class="no-print">📅 Mon Planning Personnel</h1>
 
-<div id="output"></div>
+    <div id="step1" class="step no-print">
+        <h2>1. Charger le planning global</h2>
+        <input type="file" id="fileInput" accept=".xlsx">
+        <p><small>Le fichier reste sur votre ordinateur (traitement local).</small></p>
+    </div>
+
+    <div id="step2" class="step no-print hidden">
+        <h2>2. Qui êtes-vous ?</h2>
+        <select id="userSelect"></select>
+    </div>
+
+    <div id="step3" class="step no-print hidden">
+        <h2>3. Période souhaitée</h2>
+        <div class="grid-dates">
+            <div>
+                <label>Du :</label>
+                <input type="date" id="dateStart">
+            </div>
+            <div>
+                <label>Au :</label>
+                <input type="date" id="dateEnd">
+            </div>
+        </div>
+        <button onclick="genererPlanning()">Générer mon planning</button>
+    </div>
+
+    <div id="output"></div>
 
 <script>
-function traiterFichier() {
-    const file = document.getElementById('fileInput').files[0];
-    const nomCible = document.getElementById('userName').value.trim().toLowerCase();
-    if(!file) return alert("Sélectionnez un fichier !");
+let workbookData = null;
+const moisMapping = {
+    "janvier": 0, "février": 1, "mars": 2, "avril": 3, "mai": 4, "juin": 5,
+    "juillet": 6, "août": 7, "septembre": 8, "octobre": 9, "novembre": 10, "décembre": 11
+};
 
+// --- GESTION DE L'UPLOAD ---
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
     const reader = new FileReader();
+
     reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        let resultats = "<h2>Mon Planning : " + nomCible.toUpperCase() + "</h2><table><tr><th>Date</th><th>Poste</th></tr>";
-
-        workbook.SheetNames.forEach(sheetName => {
-            // On ignore les feuilles de réglages
-            if(["infos", "vacances", "congés d'été"].includes(sheetName.toLowerCase())) return;
-
-            const sheet = workbook.Sheets[sheetName];
-            const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
-
-            // On cherche la ligne de l'utilisateur
-            json.forEach((row, index) => {
-                if(row[0] && row[0].toString().toLowerCase().includes(nomCible)) {
-                    // Les dates sont généralement sur la ligne 3 (index 2)
-                    const datesRow = json[2]; 
-                    row.forEach((cell, colIndex) => {
-                        // On prend les colonnes après la colonne 8 (début des jours)
-                        if(colIndex >= 8 && cell && cell.toString().trim() !== "") {
-                            let dateLabel = datesRow[colIndex] || "Date inconnue";
-                            resultats += `<tr><td>${sheetName} - ${dateLabel}</td><td><b>${cell}</b></td></tr>`;
-                        }
-                    });
-                }
-            });
-        });
-
-        resultats += "</table><br><button class='no-print' onclick='window.print()'>🖨️ Imprimer mon planning</button>";
-        document.getElementById('output').innerHTML = resultats;
+        workbookData = XLSX.read(data, {type: 'array'});
+        
+        // Extraire la liste des employés depuis le premier onglet mensuel trouvé
+        extraireEmployes(workbookData);
     };
     reader.readAsArrayBuffer(file);
+});
+
+function extraireEmployes(wb) {
+    const noms = new Set();
+    const premierMois = wb.SheetNames.find(n => moisMapping.hasOwnProperty(n.toLowerCase()));
+    
+    if(!premierMois) return alert("Format de fichier non reconnu.");
+
+    const sheet = wb.Sheets[premierMois];
+    const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+
+    // On parcourt la colonne A (index 0) à partir de la ligne 4
+    json.forEach((row, i) => {
+        if(i > 3 && row[0] && row[0].toString().length > 3) {
+            noms.add(row[0].toString().trim());
+        }
+    });
+
+    const select = document.getElementById('userSelect');
+    select.innerHTML = '<option value="">-- Choisissez votre nom --</option>';
+    Array.from(noms).sort().forEach(nom => {
+        const opt = document.createElement('option');
+        opt.value = nom;
+        opt.textContent = nom;
+        select.appendChild(opt);
+    });
+
+    document.getElementById('step2').classList.remove('hidden');
+    select.onchange = () => document.getElementById('step3').classList.remove('hidden');
+}
+
+// --- LOGIQUE DE GÉNÉRATION ---
+function genererPlanning() {
+    const nomCible = document.getElementById('userSelect').value;
+    const start = new Date(document.getElementById('dateStart').value);
+    const end = new Date(document.getElementById('dateEnd').value);
+
+    if(!nomCible || isNaN(start) || isNaN(end)) return alert("Veuillez remplir tous les champs.");
+
+    let html = `<h2>Planning de ${nomCible}</h2>`;
+    html += `<table><tr><th>Date</th><th>Code Poste</th></tr>`;
+
+    workbookData.SheetNames.forEach(sheetName => {
+        const moisNom = sheetName.toLowerCase();
+        if(!moisMapping.hasOwnProperty(moisNom)) return;
+
+        const sheet = workbookData.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+        const datesRow = json[2]; // Ligne des jours (ex: lundi 5)
+
+        json.forEach(row => {
+            if(row[0] === nomCible) {
+                row.forEach((cell, colIndex) => {
+                    if(colIndex >= 8 && cell) {
+                        const dayStr = datesRow[colIndex];
+                        if(dayStr) {
+                            // Extraction du numéro du jour (ex: "lundi 5" -> 5)
+                            const dayNum = parseInt(dayStr.match(/\d+/));
+                            const dateCourante = new Date(2026, moisMapping[moisNom], dayNum);
+
+                            if(dateCourante >= start && dateCourante <= end) {
+                                html += `<tr><td>${dateCourante.toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'})}</td><td><strong>${cell}</strong></td></tr>`;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    });
+
+    html += `</table><br><button class="no-print" onclick="window.print()">🖨️ Imprimer mon planning</button>`;
+    document.getElementById('output').innerHTML = html;
 }
 </script>
 </body>
