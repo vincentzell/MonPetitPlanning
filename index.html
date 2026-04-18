@@ -27,7 +27,8 @@
         }
         .btn-theme:hover { filter: brightness(1.1); }
 
-        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); }
+        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: all 0.3s ease; }
+        .drop-zone.dragover { border-color: var(--accent-color); background: rgba(0, 86, 179, 0.1); transform: scale(1.01); }
         .hidden { display: none !important; }
         
         select, input[type="date"] { padding: 10px; margin: 8px 0 15px 0; width: 100%; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
@@ -42,8 +43,6 @@
 
         #output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .print-page { display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; page-break-after: always; box-sizing: border-box; padding: 2mm 0; }
-        
-        /* Correction justification dernière page */
         .print-page:last-child { justify-content: flex-start !important; height: auto; min-height: 10cm; gap: 20px; }
         
         .print-header { display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto; padding-bottom: 3px; align-items: baseline; justify-content: space-between; }
@@ -79,7 +78,7 @@
             <button id="themeBtn" class="btn-theme" onclick="toggleDarkMode()">🌑 Mode Sombre</button>
         </div>
 
-        <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+        <div id="dropZone" class="drop-zone">
             <span id="dropText">📂 Cliquez ou glissez votre planning Excel ici</span>
             <input type="file" id="fileInput" accept=".xlsx" class="hidden">
         </div>
@@ -156,6 +155,24 @@
 
         function toggleDarkMode() { document.body.classList.toggle('dark-mode'); updateThemeButton(); savePrefs(); }
 
+        // --- GESTION DU DRAG N DROP ---
+        function initDragAndDrop() {
+            const zone = document.getElementById('dropZone');
+            const input = document.getElementById('fileInput');
+
+            zone.onclick = () => input.click();
+            
+            zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
+            zone.ondragleave = () => zone.classList.remove('dragover');
+            zone.ondrop = (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            };
+            
+            input.onchange = (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+        }
+
         function initAutoRefresh() {
             document.querySelectorAll('.auto-refresh').forEach(el => {
                 el.addEventListener('change', () => {
@@ -165,7 +182,11 @@
             });
         }
         
-        window.onload = () => { initAutoRefresh(); loadPrefs(); };
+        window.onload = () => { 
+            initDragAndDrop();
+            initAutoRefresh(); 
+            loadPrefs(); 
+        };
 
         function handleMainTitleChange() {
             const isChecked = document.getElementById('chkShowTitle').checked;
@@ -178,8 +199,6 @@
                 handleMainTitleChange();
             }
         }
-
-        document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
         function handleFile(file) {
             isGenerated = false;
