@@ -33,6 +33,7 @@
         
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
         select, input[type="date"], input[type="number"] { padding: 10px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
+        body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(0.8); background-color: rgba(255,255,255,0.15); border-radius: 4px; padding: 2px; }
         button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
         
         .btn-gen { background: #28a745; margin-top: 15px; }
@@ -142,6 +143,8 @@
 
         let isGenerated = false;
 
+        loadDarkModePrefs();
+
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const btn = document.getElementById('themeBtn');
@@ -165,14 +168,25 @@
             } catch(e) {}
         }
 
+        // Appliqué immédiatement au chargement de la page (avant tout fichier)
+        function loadDarkModePrefs() {
+            try {
+                const saved = localStorage.getItem('planning_prefs');
+                if (!saved) return;
+                const p = JSON.parse(saved);
+                if (p.darkMode) {
+                    document.body.classList.add('dark-mode');
+                    document.getElementById('themeBtn').innerHTML = "☀️ Mode Clair";
+                }
+            } catch(e) {}
+        }
+
+        // Appliqué après le chargement du fichier (les checkboxes existent)
         function loadPrefs() {
             try {
                 const saved = localStorage.getItem('planning_prefs');
                 if (!saved) return;
                 const p = JSON.parse(saved);
-                // Mode sombre : applicable dès le chargement
-                if (p.darkMode) { document.body.classList.add('dark-mode'); document.getElementById('themeBtn').innerHTML = "☀️ Mode Clair"; }
-                // Checkboxes : seulement si elles existent déjà dans le DOM
                 const el = id => document.getElementById(id);
                 if (!el('chkShowTitle')) return;
                 el('chkShowTitle').checked = p.showTitle !== false;
