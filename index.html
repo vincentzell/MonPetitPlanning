@@ -224,9 +224,13 @@
             const startVal = document.getElementById('dateStart').value;
             const weeks = parseInt(document.getElementById('nbWeeks').value);
             if (startVal && weeks) {
-                let d = new Date(startVal);
-                d.setDate(d.getDate() + (weeks * 7) - 1);
-                document.getElementById('dateEnd').value = d.toISOString().split('T')[0];
+                // Parser en heure locale (pas UTC) pour éviter le décalage de fuseau
+                const [y, m, d] = startVal.split('-').map(Number);
+                let date = new Date(y, m - 1, d);
+                date.setDate(date.getDate() + (weeks * 7) - 1);
+                // Formater en YYYY-MM-DD sans passer par toISOString (UTC)
+                const pad = n => String(n).padStart(2, '0');
+                document.getElementById('dateEnd').value = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
             }
         }
 
@@ -325,12 +329,20 @@
                             let match = label ? label.toString().match(/\d+/) : null;
                             if (match) {
                                 let dayNum = parseInt(match[0]);
-                                // FIX 7 : débordement de mois — si le numéro du jour est petit
-                                // et qu'on est en fin de mois (>= 20), c'est le mois suivant
+                                // FIX 7 : débordement de mois dans les deux sens
+                                // - début de feuille : "lundi 29" en col 8 d'une feuille juillet → c'est juin
+                                // - fin de feuille   : "vendredi 1" en col 52 d'une feuille juin → c'est juillet
                                 let adjustedMois = moisIdx;
-                                if (dayNum <= 7 && colIdx > 30) adjustedMois = (moisIdx + 1) % 12;
+                                if (dayNum >= 24 && colIdx <= 14) {
+                                    // Grands numéros en début de feuille → mois précédent
+                                    adjustedMois = (moisIdx + 11) % 12;
+                                } else if (dayNum <= 7 && colIdx > 30) {
+                                    // Petits numéros en fin de feuille → mois suivant
+                                    adjustedMois = (moisIdx + 1) % 12;
+                                }
                                 let adjustedYear = year;
-                                if (adjustedMois < moisIdx) adjustedYear++; // passage en janvier
+                                if (adjustedMois === 11 && moisIdx === 0) adjustedYear--; // jan → déc année préc.
+                                if (adjustedMois === 0 && moisIdx === 11) adjustedYear++; // déc → jan année suiv.
                                 let d = new Date(adjustedYear, adjustedMois, dayNum);
                                 if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
                             }
@@ -358,16 +370,32 @@
                 alert("Aucune donnée trouvée pour cette période.");
                 return;
             }
-            let weeks = [];
-            let currentWeek = [];
-            data.forEach((day, index) => {
-                if (index > 0 && (day.date.getDay() === 1)) {
-                    weeks.push(currentWeek);
-                    currentWeek = [];
-                }
-                currentWeek.push(day);
+
+            // Construire les semaines par calendrier (lundi de start → lundi suivant)
+            // plutôt que par rupture sur les données — évite la fusion si un lundi est absent (.RH)
+            const msPerDay = 86400000;
+            const diffDays = (start.getDay() === 0) ? -6 : 1 - start.getDay();
+            let firstMonday = new Date(start.getTime() + diffDays * msPerDay);
+
+            // Indexer les données par date (clé YYYY-MM-DD)
+            const byDate = {};
+            data.forEach(d => {
+                const key = d.date.getFullYear() + '-' + d.date.getMonth() + '-' + d.date.getDate();
+                byDate[key] = d;
             });
-            weeks.push(currentWeek);
+
+            let weeks = [];
+            let cursor = new Date(firstMonday);
+            while (cursor <= end) {
+                let week = [];
+                for (let i = 0; i < 7; i++) {
+                    const day = new Date(cursor.getTime() + i * msPerDay);
+                    const key = day.getFullYear() + '-' + day.getMonth() + '-' + day.getDate();
+                    week.push(byDate[key] || { date: day, poste: null });
+                }
+                weeks.push(week);
+                cursor = new Date(cursor.getTime() + 7 * msPerDay);
+            }
 
             const chunks = [];
             for (let i = 0; i < weeks.length; i += 8) chunks.push(weeks.slice(i, i + 8));
@@ -385,22 +413,17 @@
                          </div>`;
                 
                 chunk.forEach(week => {
-                    let firstDay = new Date(week[0].date);
-                    let diff = (firstDay.getDay() === 0 ? -6 : 1 - firstDay.getDay());
-                    let mon = new Date(firstDay); mon.setDate(firstDay.getDate() + diff);
-                    let sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+                    let mon = week[0].date;   // toujours un lundi (construit par calendrier)
+                    let sun = week[6].date;   // toujours un dimanche
 
-                    let map = {1:null, 2:null, 3:null, 4:null, 5:null, 6:null, 0:null};
-                    week.forEach(s => map[s.date.getDay()] = s);
-
+                    // week = [lun, mar, mer, jeu, ven, sam, dim]
                     html += `<div class="planning-container"><table class="planning-table">
                         <thead><tr class="planning-header-row"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
                         <tbody><tr>`;
-                    [1, 2, 3, 4, 5, 6, 0].forEach(j => {
-                        const info = map[j];
-                        const nomJ = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][j];
-                        let cur = new Date(mon); cur.setDate(mon.getDate() + (j === 0 ? 6 : j - 1));
-                        html += `<td><span class="jour-nom">${nomJ} ${cur.getDate()}</span><span class="poste-valeur">${info ? info.poste : '-'}</span></td>`;
+                    const nomsJours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+                    week.forEach((entry, i) => {
+                        const nomJ = nomsJours[i];
+                        html += `<td><span class="jour-nom">${nomJ} ${entry.date.getDate()}</span><span class="poste-valeur">${entry.poste ? entry.poste : '-'}</span></td>`;
                     });
                     html += `</tr><tr class="row-notes"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div>`;
                 });
