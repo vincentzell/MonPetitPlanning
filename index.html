@@ -26,7 +26,6 @@
             cursor: pointer; font-weight: 500; transition: all 0.2s ease; 
         }
 
-        /* FIX 4 : feedback visuel drag-over */
         .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: border-color 0.2s, background 0.2s; }
         .drop-zone.drag-over { border-color: var(--accent-color); background: rgba(0,86,179,0.06); }
         .hidden { display: none !important; }
@@ -45,13 +44,12 @@
 
         #output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         
-        /* --- STYLE D'IMPRESSION --- */
+
         .print-page { 
             display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; 
             page-break-after: always; box-sizing: border-box; padding: 2mm 0;
         }
 
-        /* Empêche l'étirement sur la dernière page */
         .print-page:last-child { justify-content: flex-start !important; }
         .print-page:last-child .planning-container { margin-bottom: 15px; }
         
@@ -153,7 +151,7 @@
         }
 
         function savePrefs() {
-            // Les checkboxes n'existent que si le fichier est chargé
+
             const el = id => document.getElementById(id);
             if (!el('chkShowTitle')) return;
             try {
@@ -168,7 +166,6 @@
             } catch(e) {}
         }
 
-        // Appliqué immédiatement au chargement de la page (avant tout fichier)
         function loadDarkModePrefs() {
             try {
                 const saved = localStorage.getItem('planning_prefs');
@@ -181,7 +178,6 @@
             } catch(e) {}
         }
 
-        // Appliqué après le chargement du fichier (les checkboxes existent)
         function loadPrefs() {
             try {
                 const saved = localStorage.getItem('planning_prefs');
@@ -221,7 +217,6 @@
             if (isGenerated) genererPlanning();
         }
 
-        // FIX 3 : calcul du lundi correct (ne saute plus une semaine si on est déjà lundi)
         function initDates() {
             let today = new Date();
             let day = today.getDay();
@@ -238,11 +233,11 @@
             const startVal = document.getElementById('dateStart').value;
             const weeks = parseInt(document.getElementById('nbWeeks').value);
             if (startVal && weeks) {
-                // Parser en heure locale (pas UTC) pour éviter le décalage de fuseau
+
                 const [y, m, d] = startVal.split('-').map(Number);
                 let date = new Date(y, m - 1, d);
                 date.setDate(date.getDate() + (weeks * 7) - 1);
-                // Formater en YYYY-MM-DD sans passer par toISOString (UTC)
+
                 const pad = n => String(n).padStart(2, '0');
                 document.getElementById('dateEnd').value = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
             }
@@ -254,7 +249,6 @@
         dropZone.onclick = () => fileInput.click();
         fileInput.onchange = (e) => { if (e.target.files.length) handleFile(e.target.files[0]); };
 
-        // FIX 4 : drag & drop réellement fonctionnel
         dropZone.addEventListener('dragover', e => {
             e.preventDefault();
             dropZone.classList.add('drag-over');
@@ -308,8 +302,7 @@
         function genererPlanning() {
             isGenerated = true;
             const nomCible = document.getElementById('userSelect').value;
-            // FIX 6 : new Date('YYYY-MM-DD') parse en UTC → décalage fuseau horaire en France
-            // On normalise à minuit heure locale pour que la comparaison avec les dates Excel soit cohérente
+
             const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
             const start = parseLocalDate(document.getElementById('dateStart').value);
             const end = parseLocalDate(document.getElementById('dateEnd').value);
@@ -323,13 +316,11 @@
                 const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
                 if (moisIdx === -1) return;
 
-                // FIX 2 : année extraite dynamiquement depuis le nom de la feuille
                 const yearMatch = sheetName.match(/\d{4}/);
                 const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
 
                 const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
 
-                // FIX 5 : recherche de la ligne de dates plus robuste (n'importe quel jour de semaine)
                 const JOURS_SEMAINE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
                 let dateRowIdx = data.findIndex(r => r && r.some(c => typeof c === 'string' && JOURS_SEMAINE.some(j => c.toLowerCase().startsWith(j))));
                 if (dateRowIdx === -1) return;
@@ -337,26 +328,24 @@
                 const userRow = data.find(r => r && r[0] && r[0].toString().trim() === nomCible);
                 if (userRow) {
                     userRow.forEach((cell, colIdx) => {
-                        // FIX 1 : les postes commencent à la colonne 8, pas 2
+
                         if (colIdx >= 8 && cell && cell.toString().trim() !== "") {
                             let label = data[dateRowIdx][colIdx];
                             let match = label ? label.toString().match(/\d+/) : null;
                             if (match) {
                                 let dayNum = parseInt(match[0]);
-                                // FIX 7 : débordement de mois dans les deux sens
-                                // - début de feuille : "lundi 29" en col 8 d'une feuille juillet → c'est juin
-                                // - fin de feuille   : "vendredi 1" en col 52 d'une feuille juin → c'est juillet
+
                                 let adjustedMois = moisIdx;
                                 if (dayNum >= 24 && colIdx <= 14) {
-                                    // Grands numéros en début de feuille → mois précédent
+
                                     adjustedMois = (moisIdx + 11) % 12;
                                 } else if (dayNum <= 7 && colIdx > 30) {
-                                    // Petits numéros en fin de feuille → mois suivant
+
                                     adjustedMois = (moisIdx + 1) % 12;
                                 }
                                 let adjustedYear = year;
-                                if (adjustedMois === 11 && moisIdx === 0) adjustedYear--; // jan → déc année préc.
-                                if (adjustedMois === 0 && moisIdx === 11) adjustedYear++; // déc → jan année suiv.
+                                if (adjustedMois === 11 && moisIdx === 0) adjustedYear--;
+                                if (adjustedMois === 0 && moisIdx === 11) adjustedYear++;
                                 let d = new Date(adjustedYear, adjustedMois, dayNum);
                                 if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
                             }
@@ -367,7 +356,6 @@
             
             extractedData.sort((a, b) => a.date - b.date);
 
-            // Build display name based on options
             const parts = nomCible.split(' ');
             const nomPart = parts[0];
             const prenomPart = parts.slice(1).join(' ');
@@ -385,13 +373,10 @@
                 return;
             }
 
-            // Construire les semaines par calendrier (lundi de start → lundi suivant)
-            // plutôt que par rupture sur les données — évite la fusion si un lundi est absent (.RH)
             const msPerDay = 86400000;
             const diffDays = (start.getDay() === 0) ? -6 : 1 - start.getDay();
             let firstMonday = new Date(start.getTime() + diffDays * msPerDay);
 
-            // Indexer les données par date (clé YYYY-MM-DD)
             const byDate = {};
             data.forEach(d => {
                 const key = d.date.getFullYear() + '-' + d.date.getMonth() + '-' + d.date.getDate();
@@ -427,10 +412,9 @@
                          </div>`;
                 
                 chunk.forEach(week => {
-                    let mon = week[0].date;   // toujours un lundi (construit par calendrier)
-                    let sun = week[6].date;   // toujours un dimanche
+                    let mon = week[0].date;
+                    let sun = week[6].date;
 
-                    // week = [lun, mar, mer, jeu, ven, sam, dim]
                     html += `<div class="planning-container"><table class="planning-table">
                         <thead><tr class="planning-header-row"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
                         <tbody><tr>`;
