@@ -25,47 +25,59 @@
             padding: 8px 16px; font-size: 0.85em; border: 1px solid var(--border-color); border-radius: 6px; 
             cursor: pointer; font-weight: 500; transition: all 0.2s ease; 
         }
-        .btn-theme:hover { filter: brightness(1.1); }
 
-        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: all 0.3s ease; }
-        .drop-zone.dragover { border-color: var(--accent-color); background: rgba(0, 86, 179, 0.1); transform: scale(1.01); }
+        /* FIX 4 : feedback visuel drag-over */
+        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: border-color 0.2s, background 0.2s; }
+        .drop-zone.drag-over { border-color: var(--accent-color); background: rgba(0,86,179,0.06); }
         .hidden { display: none !important; }
         
-        select, input[type="date"] { padding: 10px; margin: 8px 0 15px 0; width: 100%; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
-        button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: transform 0.1s, opacity 0.2s; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        select, input[type="date"], input[type="number"] { padding: 10px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
+        button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
         
         .btn-gen { background: #28a745; margin-top: 15px; }
         .btn-print { background: #0056b3; }
 
-        .chk-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 10px 0; }
-        .chk-label { display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; color: var(--text-color); }
-        .sub-opts-box { margin: -5px 0 15px 25px; padding: 8px 15px; border-left: 2px solid var(--accent-color); display: flex; gap: 20px; background: rgba(0,0,0,0.05); border-radius: 0 6px 6px 0; }
+        .chk-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 8px 0; }
+        .chk-label { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: normal; cursor: pointer; color: var(--text-color); }
+        .sub-opts-box { margin: 2px 0 12px 25px; padding: 8px 15px; border-left: 2px solid var(--accent-color); display: flex; gap: 20px; background: rgba(0,0,0,0.04); border-radius: 0 6px 6px 0; }
 
         #output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .print-page { display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; page-break-after: always; box-sizing: border-box; padding: 2mm 0; }
-        .print-page:last-child { justify-content: flex-start !important; height: auto; min-height: 10cm; gap: 20px; }
         
-        .print-header { display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto; padding-bottom: 3px; align-items: baseline; justify-content: space-between; }
+        /* --- STYLE D'IMPRESSION --- */
+        .print-page { 
+            display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; 
+            page-break-after: always; box-sizing: border-box; padding: 2mm 0;
+        }
+
+        /* Empêche l'étirement sur la dernière page */
+        .print-page:last-child { justify-content: flex-start !important; }
+        .print-page:last-child .planning-container { margin-bottom: 15px; }
+        
+        .print-header { 
+            display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto; 
+            padding-bottom: 3px; align-items: baseline; justify-content: space-between; 
+        }
         .h-col-left { flex: 1; text-align: left; font-size: 1.1em; font-weight: bold; }
         .h-col-center { flex: 1; text-align: center; font-size: 0.9em; }
         .h-col-right { flex: 1; text-align: right; font-size: 0.7em; color: #444; }
 
         .planning-container { width: 100%; page-break-inside: avoid; }
         .planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; }
-        .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.8em; font-weight: bold; -webkit-print-color-adjust: exact; }
-        .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 3px 1px; text-align: center; }
+        .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.75em; font-weight: bold; -webkit-print-color-adjust: exact; }
+        .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 4px 1px; text-align: center; }
         .planning-table th:first-child, .planning-table td:first-child { border-left: 1pt solid #000; }
         .planning-table tr:first-child th { border-top: 1pt solid #000; }
         
-        .jour-nom { font-size: 0.75em; color: #333; display: block; }
-        .poste-valeur { font-weight: bold; font-size: 1.05em; display: block; }
-        .row-notes { height: 45px; background: #fff !important; }
+        .jour-nom { font-size: 0.75em; color: #333; display: block; margin-bottom: 2px; }
+        .poste-valeur { font-weight: bold; font-size: 1.1em; display: block; }
+        .row-notes { height: 35px; background: #fff !important; }
 
         @media print {
             @page { margin: 0.5cm 0.7cm; size: portrait; }
             body { background: white !important; padding: 0; margin: 0; }
             .no-print { display: none !important; }
-            #output { padding: 0; box-shadow: none; }
+            #output { padding: 0; box-shadow: none; border-radius: 0; }
             .print-header { display: flex !important; }
         }
     </style>
@@ -84,32 +96,39 @@
         </div>
 
         <div id="step2" class="hidden">
-            <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                <label style="font-size: 0.9em; font-weight: bold;">1. Qui êtes-vous ?</label>
-                <select id="userSelect" class="auto-refresh"></select>
+            <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <label>1. Qui êtes-vous ?</label>
+                <select id="userSelect" style="width: 100%;" onchange="initDates()"></select>
                 
-                <label style="font-size: 0.9em; font-weight: bold;">2. Période à extraire</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="date" id="dateStart" class="auto-refresh">
-                    <input type="date" id="dateEnd" class="auto-refresh">
-                </div>
-
-                <label style="font-size: 0.9em; font-weight: bold;">3. Options d'affichage</label>
-                <div class="opt-section">
-                    <div class="chk-group">
-                        <label class="chk-label"><input type="checkbox" id="chkShowTitle" class="auto-refresh" checked onchange="handleMainTitleChange()"> Afficher le titre</label>
-                        <label class="chk-label"><input type="checkbox" id="chkShowPeriod" class="auto-refresh" checked> Afficher la période</label>
-                        <label class="chk-label"><input type="checkbox" id="chkShowDate" class="auto-refresh" checked> Date du fichier source</label>
+                <label>2. Période à extraire</label>
+                <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex: 2; min-width: 140px;">
+                        <span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Début (Lundi) :</span>
+                        <input type="date" id="dateStart" style="width: 100%; margin-top: 5px;" onchange="updateEndDate()">
                     </div>
-                    
-                    <div id="subTitleBox" class="sub-opts-box">
-                        <label class="chk-label"><input type="checkbox" id="chkShowLast" class="auto-refresh" checked onchange="handleSubClick()"> Nom</label>
-                        <label class="chk-label"><input type="checkbox" id="chkShowFirst" class="auto-refresh" checked onchange="handleSubClick()"> Prénom</label>
+                    <div style="flex: 1; min-width: 80px;">
+                        <span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Semaines :</span>
+                        <input type="number" id="nbWeeks" value="8" min="1" max="52" style="width: 100%; margin-top: 5px;" onchange="updateEndDate()">
+                    </div>
+                    <div style="flex: 2; min-width: 140px;">
+                        <span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Fin :</span>
+                        <input type="date" id="dateEnd" style="width: 100%; margin-top: 5px;">
                     </div>
                 </div>
 
-                <button class="btn-gen" onclick="boutonGenererAction()">🗓️ Afficher le planning</button>
-                <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer le planning</button>
+                <label>3. Options d'affichage</label>
+                <div class="chk-group">
+                    <label class="chk-label"><input type="checkbox" id="chkShowTitle" checked onchange="handleMainTitleChange(); genererSiActif();"> Afficher le titre</label>
+                    <label class="chk-label"><input type="checkbox" id="chkShowPeriod" checked onchange="genererSiActif();"> Afficher la période</label>
+                    <label class="chk-label"><input type="checkbox" id="chkShowDate" checked onchange="genererSiActif();"> Date du fichier source</label>
+                </div>
+                <div id="subTitleBox" class="sub-opts-box">
+                    <label class="chk-label"><input type="checkbox" id="chkShowLast" checked onchange="handleSubClick(); genererSiActif();"> Nom</label>
+                    <label class="chk-label"><input type="checkbox" id="chkShowFirst" checked onchange="genererSiActif();"> Prénom</label>
+                </div>
+
+                <button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
+                <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer</button>
             </div>
         </div>
     </div>
@@ -117,197 +136,276 @@
     <div id="output" class="hidden"></div>
 
     <script>
-        let workbookData = null; let fileDate = ""; let isGenerated = false;
+        let workbookData = null;
+        let fileDate = "";
         const MOIS_LISTE = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
-        function updateThemeButton() {
+        let isGenerated = false;
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
             const btn = document.getElementById('themeBtn');
             btn.innerHTML = document.body.classList.contains('dark-mode') ? "☀️ Mode Clair" : "🌑 Mode Sombre";
+            savePrefs();
         }
 
         function savePrefs() {
-            const prefs = {
-                darkMode: document.body.classList.contains('dark-mode'),
-                user: document.getElementById('userSelect').value,
-                showTitle: document.getElementById('chkShowTitle').checked,
-                showPeriod: document.getElementById('chkShowPeriod').checked,
-                showDate: document.getElementById('chkShowDate').checked,
-                showLast: document.getElementById('chkShowLast').checked,
-                showFirst: document.getElementById('chkShowFirst').checked
-            };
-            localStorage.setItem('planning_prefs', JSON.stringify(prefs));
+            // Les checkboxes n'existent que si le fichier est chargé
+            const el = id => document.getElementById(id);
+            if (!el('chkShowTitle')) return;
+            try {
+                localStorage.setItem('planning_prefs', JSON.stringify({
+                    darkMode: document.body.classList.contains('dark-mode'),
+                    showTitle: el('chkShowTitle').checked,
+                    showPeriod: el('chkShowPeriod').checked,
+                    showDate: el('chkShowDate').checked,
+                    showLast: el('chkShowLast').checked,
+                    showFirst: el('chkShowFirst').checked
+                }));
+            } catch(e) {}
         }
 
         function loadPrefs() {
-            const saved = localStorage.getItem('planning_prefs');
-            if (!saved) return;
-            const prefs = JSON.parse(saved);
-            if (prefs.darkMode) document.body.classList.add('dark-mode');
-            updateThemeButton();
-            document.getElementById('chkShowTitle').checked = prefs.showTitle;
-            document.getElementById('chkShowPeriod').checked = prefs.showPeriod;
-            document.getElementById('chkShowDate').checked = prefs.showDate;
-            document.getElementById('chkShowLast').checked = prefs.showLast;
-            document.getElementById('chkShowFirst').checked = prefs.showFirst;
-            handleMainTitleChange();
-            return prefs.user;
+            try {
+                const saved = localStorage.getItem('planning_prefs');
+                if (!saved) return;
+                const p = JSON.parse(saved);
+                // Mode sombre : applicable dès le chargement
+                if (p.darkMode) { document.body.classList.add('dark-mode'); document.getElementById('themeBtn').innerHTML = "☀️ Mode Clair"; }
+                // Checkboxes : seulement si elles existent déjà dans le DOM
+                const el = id => document.getElementById(id);
+                if (!el('chkShowTitle')) return;
+                el('chkShowTitle').checked = p.showTitle !== false;
+                el('chkShowPeriod').checked = p.showPeriod !== false;
+                el('chkShowDate').checked = p.showDate !== false;
+                el('chkShowLast').checked = p.showLast !== false;
+                el('chkShowFirst').checked = p.showFirst !== false;
+                handleMainTitleChange();
+            } catch(e) {}
         }
-
-        function toggleDarkMode() { document.body.classList.toggle('dark-mode'); updateThemeButton(); savePrefs(); }
-
-        // --- GESTION DU DRAG N DROP ---
-        function initDragAndDrop() {
-            const zone = document.getElementById('dropZone');
-            const input = document.getElementById('fileInput');
-
-            zone.onclick = () => input.click();
-            
-            zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
-            zone.ondragleave = () => zone.classList.remove('dragover');
-            zone.ondrop = (e) => {
-                e.preventDefault();
-                zone.classList.remove('dragover');
-                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-            };
-            
-            input.onchange = (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); };
-        }
-
-        function initAutoRefresh() {
-            document.querySelectorAll('.auto-refresh').forEach(el => {
-                el.addEventListener('change', () => {
-                    savePrefs();
-                    if (workbookData && isGenerated) genererPlanning();
-                });
-            });
-        }
-        
-        window.onload = () => { 
-            initDragAndDrop();
-            initAutoRefresh(); 
-            loadPrefs(); 
-        };
 
         function handleMainTitleChange() {
-            const isChecked = document.getElementById('chkShowTitle').checked;
-            document.getElementById('subTitleBox').classList.toggle('hidden', !isChecked);
+            const title = document.getElementById('chkShowTitle');
+            const box = document.getElementById('subTitleBox');
+            if (!title || !box) return;
+            box.classList.toggle('hidden', !title.checked);
         }
 
         function handleSubClick() {
-            if (!document.getElementById('chkShowLast').checked && !document.getElementById('chkShowFirst').checked) {
-                document.getElementById('chkShowTitle').checked = false;
+            const last = document.getElementById('chkShowLast');
+            const first = document.getElementById('chkShowFirst');
+            const title = document.getElementById('chkShowTitle');
+            if (!last || !first || !title) return;
+            if (!last.checked && !first.checked) {
+                title.checked = false;
                 handleMainTitleChange();
             }
         }
 
+        function genererSiActif() {
+            savePrefs();
+            if (isGenerated) genererPlanning();
+        }
+
+        // FIX 3 : calcul du lundi correct (ne saute plus une semaine si on est déjà lundi)
+        function initDates() {
+            let today = new Date();
+            let day = today.getDay();
+            let diffToMonday = (day === 0) ? 1 : (day === 1) ? 0 : (8 - day);
+
+            let nextMonday = new Date(today);
+            nextMonday.setDate(today.getDate() + diffToMonday);
+
+            document.getElementById('dateStart').value = nextMonday.toISOString().split('T')[0];
+            updateEndDate();
+        }
+
+        function updateEndDate() {
+            const startVal = document.getElementById('dateStart').value;
+            const weeks = parseInt(document.getElementById('nbWeeks').value);
+            if (startVal && weeks) {
+                let d = new Date(startVal);
+                d.setDate(d.getDate() + (weeks * 7) - 1);
+                document.getElementById('dateEnd').value = d.toISOString().split('T')[0];
+            }
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => { if (e.target.files.length) handleFile(e.target.files[0]); };
+
+        // FIX 4 : drag & drop réellement fonctionnel
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
         function handleFile(file) {
-            isGenerated = false;
-            fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR');
+            fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
+            document.getElementById('dropText').innerHTML = "<b>Fichier chargé :</b> " + file.name;
             const reader = new FileReader();
-            reader.onload = ev => {
-                workbookData = XLSX.read(new Uint8Array(ev.target.result), {type: 'array', cellDates: true});
-                const nomsMap = new Map();
-                workbookData.SheetNames.forEach(sheetName => {
-                    if (MOIS_LISTE.some(m => sheetName.toLowerCase().includes(m))) {
-                        const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
-                        for(let i=3; i<25; i++) {
-                            if(data[i] && data[i][0]) {
-                                const rawName = data[i][0].toString().trim();
-                                const upperName = rawName.toUpperCase();
-                                if(!nomsMap.has(upperName)) nomsMap.set(upperName, rawName);
-                            }
-                        }
-                    }
-                });
-                if (nomsMap.size === 0) { alert("Aucun employé trouvé."); return; }
-                const select = document.getElementById('userSelect');
-                const sortedDisplayNames = Array.from(nomsMap.values()).sort();
-                select.innerHTML = sortedDisplayNames.map(n => `<option value="${n}">${n}</option>`).join('');
-                const savedUser = loadPrefs();
-                if (savedUser) {
-                    const found = sortedDisplayNames.find(n => n.toUpperCase() === savedUser.toUpperCase());
-                    if (found) select.value = found;
-                }
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                workbookData = XLSX.read(data, {type: 'array', cellDates: true});
+                populateUsers();
+                loadPrefs();
                 document.getElementById('step2').classList.remove('hidden');
-                document.getElementById('dropText').innerHTML = "<b>Fichier chargé :</b> " + file.name;
-                document.getElementById('output').classList.add('hidden');
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function boutonGenererAction() { isGenerated = true; genererPlanning(); }
+        function populateUsers() {
+            let names = new Set();
+            workbookData.SheetNames.forEach(s => {
+                if (MOIS_LISTE.some(m => s.toLowerCase().includes(m))) {
+                    const sheet = workbookData.Sheets[s];
+                    const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                    rows.forEach(r => {
+                        if (r[0] && r[0].toString().trim().length > 2) {
+                            const val = r[0].toString().trim();
+                            if (!["NOM", "AMBULANCIERS"].includes(val.toUpperCase())) names.add(val);
+                        }
+                    });
+                }
+            });
+            const select = document.getElementById('userSelect');
+            select.innerHTML = '<option value="">-- Sélectionnez votre nom --</option>';
+            Array.from(names).sort().forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n; opt.textContent = n;
+                select.appendChild(opt);
+            });
+        }
 
         function genererPlanning() {
-            const nomSelect = document.getElementById('userSelect').value;
-            const nomSelectUpper = nomSelect.toUpperCase();
-            const startVal = document.getElementById('dateStart').value;
-            const endVal = document.getElementById('dateEnd').value;
-            const start = startVal ? new Date(startVal) : null;
-            const end = endVal ? new Date(endVal) : null;
-            const showTitle = document.getElementById('chkShowTitle').checked;
-            const showPeriod = document.getElementById('chkShowPeriod').checked;
-            const showDate = document.getElementById('chkShowDate').checked;
+            isGenerated = true;
+            const nomCible = document.getElementById('userSelect').value;
+            // FIX 6 : new Date('YYYY-MM-DD') parse en UTC → décalage fuseau horaire en France
+            // On normalise à minuit heure locale pour que la comparaison avec les dates Excel soit cohérente
+            const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+            const start = parseLocalDate(document.getElementById('dateStart').value);
+            const end = parseLocalDate(document.getElementById('dateEnd').value);
+            if (!nomCible || isNaN(start) || isNaN(end)) {
+                alert("Veuillez sélectionner un nom et une période valide.");
+                return;
+            }
 
-            const parts = nomSelect.split(' ');
-            const nom = parts[0]; const prenom = parts.slice(1).join(' ');
-            let titreAffiche = "Planning : ";
-            if(document.getElementById('chkShowLast').checked && showTitle) titreAffiche += nom + " ";
-            if(document.getElementById('chkShowFirst').checked && showTitle) titreAffiche += prenom;
-            const periodeTexte = (start && end) ? `Du ${start.toLocaleDateString()} au ${end.toLocaleDateString()}` : "";
-
-            let allDays = [];
+            let extractedData = [];
             workbookData.SheetNames.forEach(sheetName => {
                 const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
                 if (moisIdx === -1) return;
+
+                // FIX 2 : année extraite dynamiquement depuis le nom de la feuille
+                const yearMatch = sheetName.match(/\d{4}/);
+                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+
                 const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
-                const dRow = data.findIndex(r => r && r.some(c => typeof c === 'string' && c.toLowerCase().includes('lundi')));
-                if (dRow === -1) return;
-                for(let i=3; i<25; i++) {
-                    if(data[i] && data[i][0] && data[i][0].toString().trim().toUpperCase() === nomSelectUpper) {
-                        data[i].forEach((cell, cIdx) => {
-                            if(cIdx >= 2 && cell && data[dRow][cIdx]) {
-                                const m = data[dRow][cIdx].toString().match(/\d+/);
-                                if(m) {
-                                    const d = new Date(2026, moisIdx, parseInt(m[0]));
-                                    if((!start || d >= start) && (!end || d <= end)) allDays.push({date: d, poste: cell});
-                                }
+
+                // FIX 5 : recherche de la ligne de dates plus robuste (n'importe quel jour de semaine)
+                const JOURS_SEMAINE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+                let dateRowIdx = data.findIndex(r => r && r.some(c => typeof c === 'string' && JOURS_SEMAINE.some(j => c.toLowerCase().startsWith(j))));
+                if (dateRowIdx === -1) return;
+
+                const userRow = data.find(r => r && r[0] && r[0].toString().trim() === nomCible);
+                if (userRow) {
+                    userRow.forEach((cell, colIdx) => {
+                        // FIX 1 : les postes commencent à la colonne 8, pas 2
+                        if (colIdx >= 8 && cell && cell.toString().trim() !== "") {
+                            let label = data[dateRowIdx][colIdx];
+                            let match = label ? label.toString().match(/\d+/) : null;
+                            if (match) {
+                                let dayNum = parseInt(match[0]);
+                                // FIX 7 : débordement de mois — si le numéro du jour est petit
+                                // et qu'on est en fin de mois (>= 20), c'est le mois suivant
+                                let adjustedMois = moisIdx;
+                                if (dayNum <= 7 && colIdx > 30) adjustedMois = (moisIdx + 1) % 12;
+                                let adjustedYear = year;
+                                if (adjustedMois < moisIdx) adjustedYear++; // passage en janvier
+                                let d = new Date(adjustedYear, adjustedMois, dayNum);
+                                if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             });
-
-            allDays.sort((a,b) => a.date - b.date);
-            if(allDays.length === 0) { document.getElementById('output').innerHTML = "<p style='text-align:center;'>Aucune donnée pour cette sélection.</p>"; return; }
             
-            let weeks = [], temp = [];
-            allDays.forEach((item, i) => {
-                temp.push(item);
-                if(item.date.getDay() === 0 || i === allDays.length - 1) { weeks.push([...temp]); temp = []; }
-            });
+            extractedData.sort((a, b) => a.date - b.date);
 
-            let html = "";
-            for(let i=0; i<weeks.length; i += 8) {
-                const chunk = weeks.slice(i, i + 8);
-                html += `<div class="print-page">
-                    <div class="print-header">
-                        <div class="h-col-left">${showTitle ? titreAffiche : ''}</div>
-                        <div class="h-col-center">${(showPeriod && periodeTexte) ? periodeTexte : ''}</div>
-                        <div class="h-col-right">${showDate ? 'Source : ' + fileDate : ''}</div>
-                    </div>`;
-                chunk.forEach(w => {
-                    const d1 = w[0].date.toLocaleDateString(); const d2 = w[w.length-1].date.toLocaleDateString();
+            // Build display name based on options
+            const parts = nomCible.split(' ');
+            const nomPart = parts[0];
+            const prenomPart = parts.slice(1).join(' ');
+            let titreAffiche = 'Planning : ';
+            const showTitle = document.getElementById('chkShowTitle').checked;
+            if (showTitle && document.getElementById('chkShowLast').checked) titreAffiche += nomPart + ' ';
+            if (showTitle && document.getElementById('chkShowFirst').checked) titreAffiche += prenomPart;
+
+            renderPlanning(extractedData, titreAffiche, start, end);
+        }
+
+        function renderPlanning(data, nom, start, end) {
+            if (data.length === 0) {
+                alert("Aucune donnée trouvée pour cette période.");
+                return;
+            }
+            let weeks = [];
+            let currentWeek = [];
+            data.forEach((day, index) => {
+                if (index > 0 && (day.date.getDay() === 1)) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
+                }
+                currentWeek.push(day);
+            });
+            weeks.push(currentWeek);
+
+            const chunks = [];
+            for (let i = 0; i < weeks.length; i += 8) chunks.push(weeks.slice(i, i + 8));
+
+            let html = '';
+            chunks.forEach(chunk => {
+                html += `<div class="print-page">`;
+                const showPeriod = document.getElementById('chkShowPeriod').checked;
+                const showDate = document.getElementById('chkShowDate').checked;
+                const showTitleH = document.getElementById('chkShowTitle').checked;
+                html += `<div class="print-header">
+                            <div class="h-col-left">${showTitleH ? nom : ''}</div>
+                            <div class="h-col-center">${showPeriod ? 'Du ' + start.toLocaleDateString() + ' au ' + end.toLocaleDateString() : ''}</div>
+                            <div class="h-col-right">${showDate ? 'Source : ' + fileDate : ''}</div>
+                         </div>`;
+                
+                chunk.forEach(week => {
+                    let firstDay = new Date(week[0].date);
+                    let diff = (firstDay.getDay() === 0 ? -6 : 1 - firstDay.getDay());
+                    let mon = new Date(firstDay); mon.setDate(firstDay.getDate() + diff);
+                    let sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+
                     let map = {1:null, 2:null, 3:null, 4:null, 5:null, 6:null, 0:null};
-                    w.forEach(s => map[s.date.getDay()] = s);
-                    html += `<div class="planning-container"><table class="planning-table"><thead><tr class="planning-header-row"><th colspan="7">Semaine du ${d1} au ${d2}</th></tr></thead><tbody><tr>`;
-                    [1,2,3,4,5,6,0].forEach(j => {
+                    week.forEach(s => map[s.date.getDay()] = s);
+
+                    html += `<div class="planning-container"><table class="planning-table">
+                        <thead><tr class="planning-header-row"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
+                        <tbody><tr>`;
+                    [1, 2, 3, 4, 5, 6, 0].forEach(j => {
                         const info = map[j];
-                        html += `<td><span class="jour-nom">${["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"][j]} ${info?info.date.getDate():''}</span><span class="poste-valeur">${info?info.poste:'-'}</span></td>`;
+                        const nomJ = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][j];
+                        let cur = new Date(mon); cur.setDate(mon.getDate() + (j === 0 ? 6 : j - 1));
+                        html += `<td><span class="jour-nom">${nomJ} ${cur.getDate()}</span><span class="poste-valeur">${info ? info.poste : '-'}</span></td>`;
                     });
                     html += `</tr><tr class="row-notes"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div>`;
                 });
                 html += `</div>`;
-            }
+            });
             document.getElementById('output').innerHTML = html;
             document.getElementById('output').classList.remove('hidden');
             document.getElementById('btnPrintTop').classList.remove('hidden');
