@@ -319,8 +319,16 @@
             const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
             const start = parseLocalDate(document.getElementById('dateStart').value);
             const end = parseLocalDate(document.getElementById('dateEnd').value);
-            if (!nomCible || isNaN(start) || isNaN(end)) {
-                alert("Veuillez sélectionner un nom et une période valide.");
+            if (!nomCible && (isNaN(start) || isNaN(end))) {
+                alert("Veuillez sélectionner votre nom et une période.");
+                return;
+            }
+            if (!nomCible) {
+                alert("Veuillez sélectionner votre nom dans la liste.");
+                return;
+            }
+            if (isNaN(start) || isNaN(end)) {
+                alert("Veuillez sélectionner une période valide.");
                 return;
             }
 
@@ -474,7 +482,7 @@
                 userRow.forEach((cell, colIdx) => {
                     if (colIdx < 8 || !cell || cell.toString().trim() === '') return;
                     const poste = cell.toString().trim();
-                    if (poste.startsWith('.') && poste !== '.CA') return;
+                    if (poste === '.RH') return;
                     const label = data[dateRowIdx][colIdx];
                     const match = label ? label.toString().match(/\d+/) : null;
                     if (!match) return;
@@ -493,7 +501,8 @@
 
             const pad = n => String(n).padStart(2, '0');
             const toYMD = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
-            const eventsParam = jours.map(({date, poste}) => toYMD(date) + '|' + poste).join(',');
+            const prenomAgent = nomCible.split(' ').slice(1).join(' ');
+            const eventsParam = jours.map(({date, poste}) => toYMD(date) + '|' + poste + (prenomAgent ? ' - ' + prenomAgent : '')).join(',');
 
             try {
                 const resp = await fetch('https://monpetitplanning-ical.vincentzell.workers.dev/store', {
@@ -504,7 +513,12 @@
                 const id = await resp.text();
                 const url = 'https://vincentzell.github.io/MonPetitPlanning/ical.html?id=' + id;
                 qrDiv.innerHTML = '';
-                new QRCode(qrDiv, { text: url, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.L });
+                const qrLink = document.createElement('a');
+                qrLink.href = url;
+                qrLink.target = '_blank';
+                qrLink.title = 'Ouvrir le lien';
+                qrDiv.appendChild(qrLink);
+                new QRCode(qrLink, { text: url, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.L });
             } catch(err) {
                 qrDiv.innerHTML = '';
                 warn.textContent = '⚠️ Impossible de générer le QR code. Vérifiez votre connexion internet et réessayez.';

@@ -8,22 +8,18 @@
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background: #f4f7f6; }
         .box { background: white; border-radius: 12px; padding: 24px; max-width: 420px; margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-
         .progress-bar { background: #e9ecef; border-radius: 99px; height: 6px; margin-bottom: 20px; }
         .progress-fill { background: #1a73e8; border-radius: 99px; height: 6px; transition: width 0.3s; }
-
         .step-label { font-size: 0.78em; color: #888; margin-bottom: 4px; }
         .event-date { font-size: 0.9em; color: #555; margin-bottom: 4px; }
         .event-poste { font-size: 1.6em; font-weight: bold; color: #1a1a1a; margin-bottom: 20px; }
-
         .btn-add { display: block; width: 100%; background: #1a73e8; color: white; border: none; border-radius: 10px; padding: 16px; font-size: 1em; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; margin-bottom: 10px; }
         .btn-skip { display: block; width: 100%; background: none; color: #888; border: none; font-size: 0.85em; cursor: pointer; padding: 8px; }
-
+        .btn-ics { display: block; width: 100%; background: #6c757d; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 0.82em; cursor: pointer; text-align: center; text-decoration: none; margin-top: 16px; }
         .done-box { text-align: center; padding: 12px 0; }
         .done-icon { font-size: 3em; margin-bottom: 12px; }
         .done-title { font-size: 1.1em; font-weight: bold; margin-bottom: 6px; }
-        .done-sub { font-size: 0.85em; color: #666; }
-
+        .done-sub { font-size: 0.85em; color: #666; margin-bottom: 16px; }
         .err { color: #dc3545; font-size: 0.9em; text-align: center; padding: 20px 0; }
     </style>
 </head>
@@ -31,15 +27,14 @@
 <div class="box">
     <div id="app"></div>
 </div>
-
 <script>
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     const app = document.getElementById('app');
+    const WORKER = 'https://monpetitplanning-ical.vincentzell.workers.dev';
 
     const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
     const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-
     const pad = n => String(n).padStart(2, '0');
 
     const parseYMD = ymd => ({ y: +ymd.slice(0,4), m: +ymd.slice(4,6), d: +ymd.slice(6,8) });
@@ -62,37 +57,52 @@
         '&dates=' + ds + '%2F' + nextDayYMD(ds) +
         '&sf=true&output=xml';
 
-    function renderStep(events, idx) {
+    function icsBtn(id) {
+        const a = document.createElement('a');
+        a.href = WORKER + '/get?id=' + id;
+        a.className = 'btn-ics';
+        a.textContent = 'Télécharger le fichier .ics (Outlook, Apple…)';
+        return a;
+    }
+
+    function renderStep(events, idx, id) {
         if (idx >= events.length) {
-            app.innerHTML = `
-                <div class="done-box">
-                    <div class="done-icon">✅</div>
-                    <div class="done-title">Planning importé !</div>
-                    <div class="done-sub">${events.length} jour${events.length > 1 ? 's' : ''} ajouté${events.length > 1 ? 's' : ''} à votre agenda.</div>
-                </div>`;
+            app.innerHTML = '';
+            const box = document.createElement('div');
+            box.className = 'done-box';
+            box.innerHTML = '<div class="done-icon">✅</div>' +
+                '<div class="done-title">Planning importé !</div>' +
+                '<div class="done-sub">' + events.length + ' jour' + (events.length > 1 ? 's' : '') + ' ajouté' + (events.length > 1 ? 's' : '') + ' à votre agenda.</div>';
+            app.appendChild(box);
+            app.appendChild(icsBtn(id));
             return;
         }
 
-        const ev = events[idx];
-        const { ds, poste } = ev;
+        const { ds, poste } = events[idx];
         const pct = Math.round((idx / events.length) * 100);
 
-        app.innerHTML = `
-            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-            <div class="step-label">${idx + 1} sur ${events.length}</div>
-            <div class="event-date">${formatDate(ds)}</div>
-            <div class="event-poste">${poste}</div>
-            <a class="btn-add" href="${gcalUrl(ds, poste)}" target="_blank" id="btnAdd">
-                ➕ Ajouter à Google Agenda
-            </a>
-            <button class="btn-skip" id="btnNext">Suivant →</button>`;
+        app.innerHTML = '';
+        app.innerHTML =
+            '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+            '<div class="step-label">' + (idx + 1) + ' sur ' + events.length + '</div>' +
+            '<div class="event-date">' + formatDate(ds) + '</div>' +
+            '<div class="event-poste">' + poste + '</div>';
 
-        document.getElementById('btnAdd').addEventListener('click', () => {
-            setTimeout(() => renderStep(events, idx + 1), 800);
-        });
-        document.getElementById('btnNext').addEventListener('click', () => {
-            renderStep(events, idx + 1);
-        });
+        const btnAdd = document.createElement('a');
+        btnAdd.href = gcalUrl(ds, poste);
+        btnAdd.className = 'btn-add';
+        btnAdd.target = '_blank';
+        btnAdd.textContent = '➕ Ajouter à Google Agenda';
+        btnAdd.addEventListener('click', () => setTimeout(() => renderStep(events, idx + 1, id), 800));
+
+        const btnNext = document.createElement('button');
+        btnNext.className = 'btn-skip';
+        btnNext.textContent = 'Suivant →';
+        btnNext.addEventListener('click', () => renderStep(events, idx + 1, id));
+
+        app.appendChild(btnAdd);
+        app.appendChild(btnNext);
+        app.appendChild(icsBtn(id));
     }
 
     async function init() {
@@ -101,21 +111,19 @@
             return;
         }
 
-        app.innerHTML = '<p style="text-align:center; color:#888; padding:20px 0;">Chargement…</p>';
+        app.innerHTML = '<p style="text-align:center;color:#888;padding:20px 0;">Chargement…</p>';
 
         try {
-            const resp = await fetch('https://monpetitplanning-ical.vincentzell.workers.dev/get?id=' + id);
+            const resp = await fetch(WORKER + '/get?id=' + id);
             if (resp.status === 404) {
                 app.innerHTML = '<p class="err">Ce QR code a expiré (valable 24h).<br>Régénérez-en un nouveau depuis l\'ordinateur.</p>';
                 return;
             }
             if (!resp.ok) throw new Error();
 
-            // Lire le .ics et en extraire les événements
             const ics = await resp.text();
             const events = [];
-            const veventBlocks = ics.split('BEGIN:VEVENT').slice(1);
-            veventBlocks.forEach(block => {
+            ics.split('BEGIN:VEVENT').slice(1).forEach(block => {
                 const dsMatch = block.match(/DTSTART[^:]*:(\d{8})/);
                 const summaryMatch = block.match(/SUMMARY:(.+)/);
                 if (dsMatch && summaryMatch) {
@@ -128,7 +136,7 @@
                 return;
             }
 
-            renderStep(events, 0);
+            renderStep(events, 0, id);
 
         } catch(e) {
             app.innerHTML = '<p class="err">Erreur de connexion. Vérifiez votre accès internet et réessayez.</p>';
