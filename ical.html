@@ -6,20 +6,22 @@
     <title>Import Planning</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background: #f4f7f6; }
-        .box { background: white; border-radius: 12px; padding: 24px; max-width: 420px; margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        :root { --bg: #f4f7f6; --card: white; --text: #1a1a1a; --muted: #555; --skip: #888; }
+        body.dark-mode { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --muted: #aaa; --skip: #777; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background: var(--bg); color: var(--text); }
+        .box { background: var(--card); border-radius: 12px; padding: 24px; max-width: 420px; margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
         .progress-bar { background: #e9ecef; border-radius: 99px; height: 6px; margin-bottom: 20px; }
         .progress-fill { background: #1a73e8; border-radius: 99px; height: 6px; transition: width 0.3s; }
-        .step-label { font-size: 0.78em; color: #888; margin-bottom: 4px; }
-        .event-date { font-size: 0.9em; color: #555; margin-bottom: 4px; }
-        .event-poste { font-size: 1.6em; font-weight: bold; color: #1a1a1a; margin-bottom: 20px; }
+        .step-label { font-size: 0.78em; color: var(--skip); margin-bottom: 4px; }
+        .event-date { font-size: 0.9em; color: var(--muted); margin-bottom: 4px; }
+        .event-poste { font-size: 1.6em; font-weight: bold; color: var(--text); margin-bottom: 20px; }
         .btn-add { display: block; width: 100%; background: #1a73e8; color: white; border: none; border-radius: 10px; padding: 16px; font-size: 1em; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; margin-bottom: 10px; }
-        .btn-skip { display: block; width: 100%; background: none; color: #888; border: none; font-size: 0.85em; cursor: pointer; padding: 8px; }
+        .btn-skip { display: block; width: 100%; background: none; color: var(--skip); border: none; font-size: 0.85em; cursor: pointer; padding: 8px; }
         .btn-ics { display: block; width: 100%; background: #6c757d; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 0.82em; cursor: pointer; text-align: center; text-decoration: none; margin-top: 16px; }
         .done-box { text-align: center; padding: 12px 0; }
         .done-icon { font-size: 3em; margin-bottom: 12px; }
         .done-title { font-size: 1.1em; font-weight: bold; margin-bottom: 6px; }
-        .done-sub { font-size: 0.85em; color: #666; margin-bottom: 16px; }
+        .done-sub { font-size: 0.85em; color: var(--muted); margin-bottom: 16px; }
         .err { color: #dc3545; font-size: 0.9em; text-align: center; padding: 20px 0; }
     </style>
 </head>
@@ -28,6 +30,12 @@
     <div id="app"></div>
 </div>
 <script>
+    // Thème clair/sombre — suit le réglage de index.html
+    try {
+        const prefs = JSON.parse(localStorage.getItem('planning_prefs') || '{}');
+        if (prefs.darkMode) document.body.classList.add('dark-mode');
+    } catch(e) {}
+
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     const app = document.getElementById('app');
@@ -111,7 +119,7 @@
             return;
         }
 
-        app.innerHTML = '<p style="text-align:center;color:#888;padding:20px 0;">Chargement…</p>';
+        app.innerHTML = '<p style="text-align:center;color:var(--skip);padding:20px 0;">Chargement…</p>';
 
         try {
             const resp = await fetch(WORKER + '/get?id=' + id);

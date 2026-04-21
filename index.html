@@ -457,8 +457,11 @@
         async function ouvrirQR() {
             const nomCible = document.getElementById('userSelect').value;
             const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-            const start = parseLocalDate(document.getElementById('dateStart').value);
+            const startRaw = parseLocalDate(document.getElementById('dateStart').value);
             const end = parseLocalDate(document.getElementById('dateEnd').value);
+            // Aligner sur le lundi de la semaine de début, comme renderPlanning
+            const diffToMon = startRaw.getDay() === 0 ? -6 : 1 - startRaw.getDay();
+            const start = new Date(startRaw.getTime() + diffToMon * 86400000);
             const warn = document.getElementById('qrWarn');
             const qrDiv = document.getElementById('qrcode');
             const btnQR = document.getElementById('btnQR');
@@ -503,11 +506,12 @@
             const toYMD = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
             const prenomAgent = nomCible.split(' ').slice(1).join(' ');
             const eventsParam = jours.map(({date, poste}) => toYMD(date) + '|' + poste + (prenomAgent ? ' - ' + prenomAgent : '')).join(',');
+            const payload = 'AGENT:' + nomCible + '\n' + eventsParam;
 
             try {
                 const resp = await fetch('https://monpetitplanning-ical.vincentzell.workers.dev/store', {
                     method: 'POST',
-                    body: eventsParam
+                    body: payload
                 });
                 if (!resp.ok) throw new Error('Erreur serveur');
                 const id = await resp.text();
