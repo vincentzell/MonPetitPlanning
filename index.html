@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Petit Planning</title>
     <script src="xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
         :root {
@@ -37,6 +38,17 @@
         
         .btn-gen { background: #28a745; margin-top: 15px; }
         .btn-print { background: #0056b3; }
+        .btn-qr { background: #6f42c1; }
+
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: var(--card-bg); color: var(--text-color); border-radius: 12px; padding: 24px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+        .modal-box h3 { margin: 0 0 6px; font-size: 1em; }
+        .modal-box p { margin: 0 0 16px; font-size: 0.8em; opacity: 0.7; }
+        .modal-close { margin-top: 16px; background: #6c757d; color: white; border: none; border-radius: 6px; padding: 8px 20px; cursor: pointer; font-weight: bold; }
+        #qrcode { display: flex; justify-content: center; margin: 12px 0; }
+        #qrcode canvas, #qrcode img { border-radius: 6px; }
+        .modal-warn { font-size: 0.75em; color: #dc3545; margin-top: 8px; }
 
         .chk-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 8px 0; }
         .chk-label { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: normal; cursor: pointer; color: var(--text-color); }
@@ -128,6 +140,7 @@
 
                 <button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
                 <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer</button>
+                <button id="btnQR" class="btn-qr hidden" onclick="ouvrirQR()">📲 Envoyer vers Agenda (QR)</button>
             </div>
         </div>
     </div>
@@ -430,7 +443,94 @@
             document.getElementById('output').innerHTML = html;
             document.getElementById('output').classList.remove('hidden');
             document.getElementById('btnPrintTop').classList.remove('hidden');
+            document.getElementById('btnQR').classList.remove('hidden');
+        }
+
+        function ouvrirQR() {
+            const nomCible = document.getElementById('userSelect').value;
+            const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+            const start = parseLocalDate(document.getElementById('dateStart').value);
+            const end = parseLocalDate(document.getElementById('dateEnd').value);
+            const warn = document.getElementById('qrWarn');
+            const qrDiv = document.getElementById('qrcode');
+            qrDiv.innerHTML = '';
+            warn.classList.add('hidden');
+
+            const semaines = Math.round((end - start) / (7 * 86400000)) + 1;
+            if (semaines > 6) {
+                warn.textContent = '⚠️ La période sélectionnée est trop longue. Choisissez 6 semaines maximum dans le champ "Semaines", puis réessayez.';
+                warn.classList.remove('hidden');
+                document.getElementById('modalQR').classList.add('open');
+                return;
+            }
+
+            const jours = [];
+            workbookData.SheetNames.forEach(sheetName => {
+                const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
+                if (moisIdx === -1) return;
+                const yearMatch = sheetName.match(/\d{4}/);
+                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+                const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
+                const JOURS_SEMAINE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+                let dateRowIdx = data.findIndex(r => r && r.some(c => typeof c === 'string' && JOURS_SEMAINE.some(j => c.toLowerCase().startsWith(j))));
+                if (dateRowIdx === -1) return;
+                const userRow = data.find(r => r && r[0] && r[0].toString().trim() === nomCible);
+                if (!userRow) return;
+                userRow.forEach((cell, colIdx) => {
+                    if (colIdx < 8 || !cell || cell.toString().trim() === '') return;
+                    const poste = cell.toString().trim();
+                    if (poste.startsWith('.') && poste !== '.CA') return;
+                    const label = data[dateRowIdx][colIdx];
+                    const match = label ? label.toString().match(/\d+/) : null;
+                    if (!match) return;
+                    const dayNum = parseInt(match[0]);
+                    let adjustedMois = moisIdx;
+                    if (dayNum >= 24 && colIdx <= 14) adjustedMois = (moisIdx + 11) % 12;
+                    else if (dayNum <= 7 && colIdx > 30) adjustedMois = (moisIdx + 1) % 12;
+                    let adjustedYear = year;
+                    if (adjustedMois === 11 && moisIdx === 0) adjustedYear--;
+                    if (adjustedMois === 0 && moisIdx === 11) adjustedYear++;
+                    const d = new Date(adjustedYear, adjustedMois, dayNum);
+                    if (d >= start && d <= end) jours.push({ date: d, poste });
+                });
+            });
+            jours.sort((a, b) => a.date - b.date);
+
+            const pad = n => String(n).padStart(2, '0');
+            const toYMD = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
+            const eventsParam = jours.map(({date, poste}) => toYMD(date) + '|' + poste).join(',');
+            const url = 'https://vincentzell.github.io/MonPetitPlanning/ical.html?e=' + encodeURIComponent(eventsParam);
+
+            if (url.length > 2800) {
+                warn.textContent = '⚠️ Trop de données pour générer un QR code. Choisissez une période plus courte (4 semaines maximum), puis réessayez.';
+                warn.classList.remove('hidden');
+                document.getElementById('modalQR').classList.add('open');
+                return;
+            }
+
+            try {
+                new QRCode(qrDiv, { text: url, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.L });
+            } catch(e) {
+                warn.textContent = '⚠️ Impossible de générer le QR code. Essayez avec une période plus courte.';
+                warn.classList.remove('hidden');
+            }
+
+            document.getElementById('modalQR').classList.add('open');
+        }
+
+        function fermerQR() {
+            document.getElementById('modalQR').classList.remove('open');
         }
     </script>
+    <div id="modalQR" class="modal-overlay" onclick="if(event.target===this) fermerQR()">
+        <div class="modal-box">
+            <h3>Envoyer vers l'agenda</h3>
+            <p>Scannez avec votre téléphone pour importer les postes</p>
+            <div id="qrcode"></div>
+            <div id="qrWarn" class="modal-warn hidden"></div>
+            <button class="modal-close" onclick="fermerQR()">Fermer</button>
+        </div>
+    </div>
+
 </body>
 </html>

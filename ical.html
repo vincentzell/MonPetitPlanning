@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Planning</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f4f7f6; }
+        .box { background: white; border-radius: 12px; padding: 32px 24px; max-width: 360px; width: 90%; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        h2 { margin: 0 0 8px; font-size: 1.2em; }
+        p { color: #555; font-size: 0.9em; margin: 0 0 20px; line-height: 1.5; }
+        .btn { display: inline-block; background: #0056b3; color: white; border: none; border-radius: 8px; padding: 14px 28px; font-size: 1em; font-weight: bold; cursor: pointer; text-decoration: none; }
+        .btn:hover { background: #004494; }
+        .err { color: #dc3545; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>📅 Import Planning</h2>
+        <p id="msg">Préparation de votre planning…</p>
+        <a id="dlBtn" class="btn" style="display:none">Télécharger et importer</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const e = params.get('e');
+
+        if (!e) {
+            document.getElementById('msg').innerHTML = '<span class="err">Lien invalide. Scannez à nouveau le QR code.</span>';
+        } else {
+            const events = e.split(',').filter(Boolean);
+            const pad = n => String(n).padStart(2, '0');
+
+            const nextDay = ymd => {
+                const y = parseInt(ymd.slice(0,4));
+                const m = parseInt(ymd.slice(4,6)) - 1;
+                const d = parseInt(ymd.slice(6,8));
+                const dt = new Date(y, m, d + 1);
+                return dt.getFullYear() + pad(dt.getMonth()+1) + pad(dt.getDate());
+            };
+
+            let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MonPetitPlanning//FR\r\nCALSCALE:GREGORIAN\r\n';
+            events.forEach((ev, i) => {
+                const [ds, poste] = ev.split('|');
+                if (!ds || !poste) return;
+                const de = nextDay(ds);
+                ics += `BEGIN:VEVENT\r\nUID:mpp-${ds}-${i}@monpetitplanning\r\nDTSTART;VALUE=DATE:${ds}\r\nDTEND;VALUE=DATE:${de}\r\nSUMMARY:${poste}\r\nEND:VEVENT\r\n`;
+            });
+            ics += 'END:VCALENDAR';
+
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const btn = document.getElementById('dlBtn');
+            btn.href = url;
+            btn.download = 'planning.ics';
+            btn.style.display = 'inline-block';
+
+            const n = events.length;
+            document.getElementById('msg').textContent = n + ' jour' + (n > 1 ? 's' : '') + ' trouvé' + (n > 1 ? 's' : '') + '. Appuyez sur le bouton ci-dessous, puis ouvrez le fichier pour l\'importer dans votre agenda.';
+
+            // Sur iOS/Android, tenter l'ouverture automatique
+            btn.click();
+        }
+    </script>
+</body>
+</html>
