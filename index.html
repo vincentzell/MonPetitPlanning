@@ -446,23 +446,18 @@
             document.getElementById('btnQR').classList.remove('hidden');
         }
 
-        function ouvrirQR() {
+        async function ouvrirQR() {
             const nomCible = document.getElementById('userSelect').value;
             const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
             const start = parseLocalDate(document.getElementById('dateStart').value);
             const end = parseLocalDate(document.getElementById('dateEnd').value);
             const warn = document.getElementById('qrWarn');
             const qrDiv = document.getElementById('qrcode');
+            const btnQR = document.getElementById('btnQR');
             qrDiv.innerHTML = '';
             warn.classList.add('hidden');
-
-            const semaines = Math.round((end - start) / (7 * 86400000)) + 1;
-            if (semaines > 6) {
-                warn.textContent = '⚠️ La période sélectionnée est trop longue. Choisissez 6 semaines maximum dans le champ "Semaines", puis réessayez.';
-                warn.classList.remove('hidden');
-                document.getElementById('modalQR').classList.add('open');
-                return;
-            }
+            document.getElementById('modalQR').classList.add('open');
+            qrDiv.innerHTML = '<p style="color:var(--text-color); opacity:0.6; margin:20px 0;">Génération en cours…</p>';
 
             const jours = [];
             workbookData.SheetNames.forEach(sheetName => {
@@ -499,23 +494,22 @@
             const pad = n => String(n).padStart(2, '0');
             const toYMD = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
             const eventsParam = jours.map(({date, poste}) => toYMD(date) + '|' + poste).join(',');
-            const url = 'https://vincentzell.github.io/MonPetitPlanning/ical.html?e=' + encodeURIComponent(eventsParam);
-
-            if (url.length > 2800) {
-                warn.textContent = '⚠️ Trop de données pour générer un QR code. Choisissez une période plus courte (4 semaines maximum), puis réessayez.';
-                warn.classList.remove('hidden');
-                document.getElementById('modalQR').classList.add('open');
-                return;
-            }
 
             try {
+                const resp = await fetch('https://monpetitplanning-ical.vincentzell.workers.dev/store', {
+                    method: 'POST',
+                    body: eventsParam
+                });
+                if (!resp.ok) throw new Error('Erreur serveur');
+                const id = await resp.text();
+                const url = 'https://vincentzell.github.io/MonPetitPlanning/ical.html?id=' + id;
+                qrDiv.innerHTML = '';
                 new QRCode(qrDiv, { text: url, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.L });
-            } catch(e) {
-                warn.textContent = '⚠️ Impossible de générer le QR code. Essayez avec une période plus courte.';
+            } catch(err) {
+                qrDiv.innerHTML = '';
+                warn.textContent = '⚠️ Impossible de générer le QR code. Vérifiez votre connexion internet et réessayez.';
                 warn.classList.remove('hidden');
             }
-
-            document.getElementById('modalQR').classList.add('open');
         }
 
         function fermerQR() {
@@ -525,7 +519,7 @@
     <div id="modalQR" class="modal-overlay" onclick="if(event.target===this) fermerQR()">
         <div class="modal-box">
             <h3>Envoyer vers l'agenda</h3>
-            <p>Scannez avec votre téléphone pour importer les postes</p>
+            <p>Scannez avec votre téléphone pour importer tous vos postes dans votre agenda</p>
             <div id="qrcode"></div>
             <div id="qrWarn" class="modal-warn hidden"></div>
             <button class="modal-close" onclick="fermerQR()">Fermer</button>
