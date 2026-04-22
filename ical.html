@@ -2,156 +2,129 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Import Planning</title>
+    <title>Générateur iCal</title>
+    <script src="xlsx.full.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        :root { --bg: #f4f7f6; --card: white; --text: #1a1a1a; --muted: #555; --skip: #888; }
-        body.dark-mode { --bg: #1a1a1a; --card: #2d2d2d; --text: #e0e0e0; --muted: #aaa; --skip: #777; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background: var(--bg); color: var(--text); }
-        .box { background: var(--card); border-radius: 12px; padding: 24px; max-width: 420px; margin: 0 auto; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-        .progress-bar { background: #e9ecef; border-radius: 99px; height: 6px; margin-bottom: 20px; }
-        .progress-fill { background: #1a73e8; border-radius: 99px; height: 6px; transition: width 0.3s; }
-        .step-label { font-size: 0.78em; color: var(--skip); margin-bottom: 4px; }
-        .event-date { font-size: 0.9em; color: var(--muted); margin-bottom: 4px; }
-        .event-poste { font-size: 1.6em; font-weight: bold; color: var(--text); margin-bottom: 20px; }
-        .btn-add { display: block; width: 100%; background: #1a73e8; color: white; border: none; border-radius: 10px; padding: 16px; font-size: 1em; font-weight: bold; cursor: pointer; text-align: center; text-decoration: none; margin-bottom: 10px; }
-        .btn-skip { display: block; width: 100%; background: none; color: var(--skip); border: none; font-size: 0.85em; cursor: pointer; padding: 8px; }
-        .btn-ics { display: block; width: 100%; background: #6c757d; color: white; border: none; border-radius: 8px; padding: 10px; font-size: 0.82em; cursor: pointer; text-align: center; text-decoration: none; margin-top: 16px; }
-        .done-box { text-align: center; padding: 12px 0; }
-        .done-icon { font-size: 3em; margin-bottom: 12px; }
-        .done-title { font-size: 1.1em; font-weight: bold; margin-bottom: 6px; }
-        .done-sub { font-size: 0.85em; color: var(--muted); margin-bottom: 16px; }
-        .err { color: #dc3545; font-size: 0.9em; text-align: center; padding: 20px 0; }
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+        #drop-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 20px; }
+        #drop-zone.hover { border-color: #333; background-color: #f9f9f9; }
+        #output { white-space: pre-wrap; background: #eee; padding: 10px; border: 1px solid #ddd; max-height: 300px; overflow-y: auto; }
+        .controls { margin-top: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
     </style>
 </head>
 <body>
-<div class="box">
-    <div id="app"></div>
-</div>
-<script>
-    // Thème clair/sombre — suit le réglage de index.html
-    try {
-        const prefs = JSON.parse(localStorage.getItem('planning_prefs') || '{}');
-        if (prefs.darkMode) document.body.classList.add('dark-mode');
-    } catch(e) {}
 
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
-    const app = document.getElementById('app');
-    const WORKER = 'https://monpetitplanning-ical.vincentzell.workers.dev';
+    <h1>Générateur de Calendrier</h1>
+    <div id="drop-zone">Déposez votre fichier Excel ici ou cliquez pour choisir</div>
+    <input type="file" id="file-input" style="display:none" accept=".xlsx, .xls">
 
-    const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-    const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-    const pad = n => String(n).padStart(2, '0');
+    <div class="controls">
+        <label for="agent-select">Choisir un agent :</label>
+        <select id="agent-select"></select>
+        <button id="save-btn" disabled>Sauvegarder et Générer le lien</button>
+    </div>
 
-    const parseYMD = ymd => ({ y: +ymd.slice(0,4), m: +ymd.slice(4,6), d: +ymd.slice(6,8) });
+    <h3>Aperçu des données :</h3>
+    <div id="output">Aucune donnée chargée.</div>
 
-    const formatDate = ymd => {
-        const { y, m, d } = parseYMD(ymd);
-        const dt = new Date(y, m - 1, d);
-        return JOURS[dt.getDay()] + ' ' + d + ' ' + MOIS[m - 1] + ' ' + y;
-    };
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const agentSelect = document.getElementById('agent-select');
+        const saveBtn = document.getElementById('save-btn');
+        const output = document.getElementById('output');
 
-    const nextDayYMD = ymd => {
-        const { y, m, d } = parseYMD(ymd);
-        const dt = new Date(Date.UTC(y, m - 1, d + 1));
-        return dt.getUTCFullYear() + pad(dt.getUTCMonth()+1) + pad(dt.getUTCDate());
-    };
+        let workbookData = null;
 
-    const gcalUrl = (ds, poste) =>
-        'https://calendar.google.com/calendar/render?action=TEMPLATE' +
-        '&text=' + encodeURIComponent(poste) +
-        '&dates=' + ds + '%2F' + nextDayYMD(ds) +
-        '&sf=true&output=xml';
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('hover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('hover');
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('hover');
+            handleFile(e.dataTransfer.files[0]);
+        };
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
-    function icsBtn(id) {
-        const a = document.createElement('a');
-        a.href = WORKER + '/get?id=' + id;
-        a.className = 'btn-ics';
-        a.textContent = '⬇️ Télécharger pour un autre agenda';
-        return a;
-    }
-
-    function renderStep(events, idx, id) {
-        if (idx >= events.length) {
-            app.innerHTML = '';
-            const box = document.createElement('div');
-            box.className = 'done-box';
-            box.innerHTML = '<div class="done-icon">✅</div>' +
-                '<div class="done-title">Planning importé !</div>' +
-                '<div class="done-sub">' + events.length + ' jour' + (events.length > 1 ? 's' : '') + ' ajouté' + (events.length > 1 ? 's' : '') + ' à votre agenda.</div>';
-            app.appendChild(box);
-            app.appendChild(icsBtn(id));
-            return;
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                workbookData = XLSX.utils.sheet_to_json(worksheet);
+                
+                populateAgents(workbookData);
+                output.textContent = JSON.stringify(workbookData, null, 2);
+                saveBtn.disabled = false;
+            };
+            reader.readAsArrayBuffer(file);
         }
 
-        const { ds, poste } = events[idx];
-        const pct = Math.round((idx / events.length) * 100);
-
-        app.innerHTML = '';
-        app.innerHTML =
-            '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
-            '<div class="step-label">' + (idx + 1) + ' sur ' + events.length + '</div>' +
-            '<div class="event-date">' + formatDate(ds) + '</div>' +
-            '<div class="event-poste">' + poste + '</div>';
-
-        const btnAdd = document.createElement('a');
-        btnAdd.href = gcalUrl(ds, poste);
-        btnAdd.className = 'btn-add';
-        btnAdd.target = '_blank';
-        btnAdd.textContent = '➕ Ajouter à Google Agenda';
-        btnAdd.addEventListener('click', () => setTimeout(() => renderStep(events, idx + 1, id), 800));
-
-        const btnNext = document.createElement('button');
-        btnNext.className = 'btn-skip';
-        btnNext.textContent = 'Suivant →';
-        btnNext.addEventListener('click', () => renderStep(events, idx + 1, id));
-
-        app.appendChild(btnAdd);
-        app.appendChild(btnNext);
-        app.appendChild(icsBtn(id));
-    }
-
-    async function init() {
-        if (!id) {
-            app.innerHTML = '<p class="err">Lien invalide. Scannez à nouveau le QR code.</p>';
-            return;
-        }
-
-        app.innerHTML = '<p style="text-align:center;color:var(--skip);padding:20px 0;">Chargement…</p>';
-
-        try {
-            const resp = await fetch(WORKER + '/get?id=' + id);
-            if (resp.status === 404) {
-                app.innerHTML = '<p class="err">Ce QR code a expiré (valable 24h).<br>Régénérez-en un nouveau depuis l\'ordinateur.</p>';
-                return;
+        function populateAgents(data) {
+            agentSelect.innerHTML = "";
+            if (data.length > 0) {
+                // On suppose que la première colonne contient les noms (à adapter selon ton Excel)
+                const keys = Object.keys(data[0]);
+                const agentKey = keys[0]; 
+                const agents = [...new Set(data.map(row => row[agentKey]))].filter(a => a);
+                agents.forEach(agent => {
+                    const opt = document.createElement('option');
+                    opt.value = agent.toLowerCase().replace(/\s+/g, '');
+                    opt.textContent = agent;
+                    agentSelect.appendChild(opt);
+                });
             }
-            if (!resp.ok) throw new Error();
+        }
 
-            const ics = await resp.text();
-            const events = [];
-            ics.split('BEGIN:VEVENT').slice(1).forEach(block => {
-                const dsMatch = block.match(/DTSTART[^:]*:(\d{8})/);
-                const summaryMatch = block.match(/SUMMARY:(.+)/);
-                if (dsMatch && summaryMatch) {
-                    events.push({ ds: dsMatch[1], poste: summaryMatch[1].trim() });
+        saveBtn.onclick = async () => {
+            const agent = agentSelect.value;
+            const keys = Object.keys(workbookData[0]);
+            const agentKey = keys[0];
+            
+            // Formatage des données en "Date|Poste" pour le worker
+            const filteredData = workbookData
+                .filter(row => row[agentKey].toLowerCase().replace(/\s+/g, '') === agent)
+                .map(row => {
+                    // Logique simplifiée : adapter selon les colonnes réelles de ton Excel
+                    const dateRaw = row["Date"] || row[keys[1]]; 
+                    const poste = row["Poste"] || row[keys[2]];
+                    return `${dateRaw}|${poste}`;
+                }).join('\n');
+
+            await saveToCloudflare(agent, filteredData);
+        };
+
+        async function saveToCloudflare(agent, data) {
+            const workerUrl = "https://monpetitplanning-ical.vincentzell.workers.dev/store";
+            
+            try {
+                const response = await fetch(workerUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json" // Spécifie le format JSON
+                    },
+                    body: JSON.stringify({
+                        agent: agent,
+                        data: data
+                    })
+                });
+
+                if (response.ok) {
+                    const icalUrl = `https://monpetitplanning-ical.vincentzell.workers.dev/?agent=${agent}`;
+                    alert("Succès ! Votre lien iCal est prêt :\n" + icalUrl);
+                    console.log("Lien :", icalUrl);
+                } else {
+                    const err = await response.text();
+                    alert("Erreur lors de la sauvegarde : " + err);
                 }
-            });
-
-            if (events.length === 0) {
-                app.innerHTML = '<p class="err">Aucun événement trouvé dans ce planning.</p>';
-                return;
+            } catch (error) {
+                alert("Erreur réseau : " + error.message);
             }
-
-            renderStep(events, 0, id);
-
-        } catch(e) {
-            app.innerHTML = '<p class="err">Erreur de connexion. Vérifiez votre accès internet et réessayez.</p>';
         }
-    }
-
-    init();
-</script>
+    </script>
 </body>
 </html>
