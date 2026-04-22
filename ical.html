@@ -2,31 +2,31 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Générateur iCal</title>
+    <title>Générateur iCal - MonPetitPlanning</title>
     <script src="xlsx.full.min.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
-        #drop-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 20px; }
-        #drop-zone.hover { border-color: #333; background-color: #f9f9f9; }
-        #output { white-space: pre-wrap; background: #eee; padding: 10px; border: 1px solid #ddd; max-height: 300px; overflow-y: auto; }
-        .controls { margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; color: #333; }
+        #drop-zone { border: 3px dashed #3498db; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: 0.3s; }
+        #drop-zone.hover { background: #ebf5fb; border-color: #2980b9; }
+        .controls { margin: 20px 0; display: flex; gap: 10px; align-items: center; }
+        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        button:disabled { background: #bdc3c7; }
+        #output { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <h1>Générateur de Calendrier</h1>
-    <div id="drop-zone">Déposez votre fichier Excel ici ou cliquez pour choisir</div>
+    <h1>📅 Générateur de Planning iCal</h1>
+    <div id="drop-zone">Glissez-déposez le fichier Excel ici ou cliquez pour parcourir</div>
     <input type="file" id="file-input" style="display:none" accept=".xlsx, .xls">
 
     <div class="controls">
-        <label for="agent-select">Choisir un agent :</label>
+        <label>Agent :</label>
         <select id="agent-select"></select>
-        <button id="save-btn" disabled>Sauvegarder et Générer le lien</button>
+        <button id="save-btn" disabled>Générer et Sauvegarder</button>
     </div>
 
-    <h3>Aperçu des données :</h3>
-    <div id="output">Aucune donnée chargée.</div>
+    <div id="output">En attente de fichier...</div>
 
     <script>
         const dropZone = document.getElementById('drop-zone');
@@ -35,16 +35,13 @@
         const saveBtn = document.getElementById('save-btn');
         const output = document.getElementById('output');
 
-        let workbookData = null;
+        let fullData = [];
 
+        // --- Gestion des fichiers ---
         dropZone.onclick = () => fileInput.click();
         dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('hover'); };
         dropZone.ondragleave = () => dropZone.classList.remove('hover');
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('hover');
-            handleFile(e.dataTransfer.files[0]);
-        };
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('hover'); handleFile(e.dataTransfer.files[0]); };
         fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
         function handleFile(file) {
@@ -53,76 +50,79 @@
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                workbookData = XLSX.utils.sheet_to_json(worksheet);
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                fullData = XLSX.utils.sheet_to_json(sheet);
                 
-                populateAgents(workbookData);
-                output.textContent = JSON.stringify(workbookData, null, 2);
-                saveBtn.disabled = false;
+                if (fullData.length > 0) {
+                    populateAgents(fullData);
+                    output.innerHTML = `✅ <b>${fullData.length}</b> lignes chargées. Sélectionnez un agent.`;
+                    saveBtn.disabled = false;
+                }
             };
             reader.readAsArrayBuffer(file);
         }
 
         function populateAgents(data) {
-            agentSelect.innerHTML = "";
-            if (data.length > 0) {
-                // On suppose que la première colonne contient les noms (à adapter selon ton Excel)
-                const keys = Object.keys(data[0]);
-                const agentKey = keys[0]; 
-                const agents = [...new Set(data.map(row => row[agentKey]))].filter(a => a);
-                agents.forEach(agent => {
-                    const opt = document.createElement('option');
-                    opt.value = agent.toLowerCase().replace(/\s+/g, '');
-                    opt.textContent = agent;
-                    agentSelect.appendChild(opt);
-                });
-            }
+            const agentKey = Object.keys(data[0])[0]; 
+            const agents = [...new Set(data.map(row => row[agentKey]))].filter(a => a).sort();
+            agentSelect.innerHTML = agents.map(a => `<option value="${a}">${a}</option>`).join('');
         }
 
+        // --- Sauvegarde ---
         saveBtn.onclick = async () => {
-            const agent = agentSelect.value;
-            const keys = Object.keys(workbookData[0]);
+            const selectedAgent = agentSelect.value;
+            const agentSlug = selectedAgent.toLowerCase().replace(/\s+/g, '');
+            const keys = Object.keys(fullData[0]);
             const agentKey = keys[0];
-            
-            // Formatage des données en "Date|Poste" pour le worker
-            const filteredData = workbookData
-                .filter(row => row[agentKey].toLowerCase().replace(/\s+/g, '') === agent)
+            const dateKey = keys[1]; // Supposé être la 2ème colonne
+            const posteKey = keys[2]; // Supposé être la 3ème colonne
+
+            // Filtrage et formatage Date|Poste
+            const formattedLines = fullData
+                .filter(row => row[agentKey] === selectedAgent)
                 .map(row => {
-                    // Logique simplifiée : adapter selon les colonnes réelles de ton Excel
-                    const dateRaw = row["Date"] || row[keys[1]]; 
-                    const poste = row["Poste"] || row[keys[2]];
-                    return `${dateRaw}|${poste}`;
+                    let d = row[dateKey];
+                    // Si Excel transforme la date en nombre, on peut avoir besoin de la convertir
+                    // Ici on assume un format texte YYYYMMDD ou compatible
+                    return `${d}|${row[posteKey] || 'Poste'}`;
                 }).join('\n');
 
-            await saveToCloudflare(agent, filteredData);
+            await sendToWorker(agentSlug, formattedLines);
         };
 
-        async function saveToCloudflare(agent, data) {
-            const workerUrl = "https://monpetitplanning-ical.vincentzell.workers.dev/store";
+        async function sendToWorker(slug, planningText) {
+            const url = "https://monpetitplanning-ical.vincentzell.workers.dev/store";
             
             try {
-                const response = await fetch(workerUrl, {
+                saveBtn.innerText = "Envoi...";
+                saveBtn.disabled = true;
+
+                const response = await fetch(url, {
                     method: "POST",
+                    mode: "cors", // Force le mode CORS
                     headers: {
-                        "Content-Type": "application/json" // Spécifie le format JSON
+                        "Content-Type": "application/json" // CRUCIAL
                     },
                     body: JSON.stringify({
-                        agent: agent,
-                        data: data
+                        agent: slug,
+                        data: planningText
                     })
                 });
 
                 if (response.ok) {
-                    const icalUrl = `https://monpetitplanning-ical.vincentzell.workers.dev/?agent=${agent}`;
-                    alert("Succès ! Votre lien iCal est prêt :\n" + icalUrl);
-                    console.log("Lien :", icalUrl);
+                    const finalUrl = `https://monpetitplanning-ical.vincentzell.workers.dev/?agent=${slug}`;
+                    output.innerHTML = `🎉 <b>Sauvegarde réussie !</b><br><br>Lien à copier dans Google Agenda :<br><code style="background:#fff; padding:5px; border:1px solid #ccc;">${finalUrl}</code>`;
+                    alert("C'est bon ! Le lien est généré.");
                 } else {
-                    const err = await response.text();
-                    alert("Erreur lors de la sauvegarde : " + err);
+                    const errorMsg = await response.text();
+                    throw new Error(errorMsg || "Erreur 400 du Worker");
                 }
-            } catch (error) {
-                alert("Erreur réseau : " + error.message);
+            } catch (err) {
+                alert("Erreur : " + err.message);
+                output.textContent = "Erreur : " + err.message;
+            } finally {
+                saveBtn.innerText = "Générer et Sauvegarder";
+                saveBtn.disabled = false;
             }
         }
     </script>
