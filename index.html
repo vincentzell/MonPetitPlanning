@@ -1,548 +1,378 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Petit Planning</title>
-    <script src="xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
-    <style>
-        :root {
-            --bg-color: #f4f7f6; --card-bg: white; --text-color: #333; --border-color: #ddd; --accent-color: #0056b3; --drop-bg: #f8f9fa;
-            --btn-theme-bg: #e9ecef; --btn-theme-text: #495057;
-        }
-        body.dark-mode {
-            --bg-color: #1a1a1a; --card-bg: #2d2d2d; --text-color: #e0e0e0; --border-color: #444; --accent-color: #3d8bfd; --drop-bg: #383838;
-            --btn-theme-bg: #3d3d3d; --btn-theme-text: #ced4da;
-        }
-        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 10px; background-color: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
-        
-        .no-print { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid transparent; }
-        .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        
-        .btn-theme { 
-            width: auto !important; background: var(--btn-theme-bg) !important; color: var(--btn-theme-text) !important; 
-            padding: 8px 16px; font-size: 0.85em; border: 1px solid var(--border-color); border-radius: 6px; 
-            cursor: pointer; font-weight: 500; transition: all 0.2s ease; 
-        }
-
-        .drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: border-color 0.2s, background 0.2s; }
-        .drop-zone.drag-over { border-color: var(--accent-color); background: rgba(0,86,179,0.06); }
-        .hidden { display: none !important; }
-        
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
-        select, input[type="date"], input[type="number"] { padding: 10px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
-        body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(0.8); background-color: rgba(255,255,255,0.15); border-radius: 4px; padding: 2px; }
-        button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
-        
-        .btn-gen { background: #28a745; margin-top: 15px; }
-        .btn-print { background: #0056b3; }
-        .btn-qr { background: #6f42c1; }
-
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-overlay.open { display: flex; }
-        .modal-box { background: var(--card-bg); color: var(--text-color); border-radius: 12px; padding: 24px; max-width: 340px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-        .modal-box h3 { margin: 0 0 6px; font-size: 1em; }
-        .modal-box p { margin: 0 0 16px; font-size: 0.8em; opacity: 0.7; }
-        .modal-close { margin-top: 16px; background: #6c757d; color: white; border: none; border-radius: 6px; padding: 8px 20px; cursor: pointer; font-weight: bold; }
-        #qrcode { display: flex; justify-content: center; margin: 12px 0; }
-        #qrcode canvas, #qrcode img { border-radius: 6px; }
-        .modal-warn { font-size: 0.75em; color: #dc3545; margin-top: 8px; }
-
-        .chk-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 8px 0; }
-        .chk-label { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: normal; cursor: pointer; color: var(--text-color); }
-        .sub-opts-box { margin: 2px 0 12px 25px; padding: 8px 15px; border-left: 2px solid var(--accent-color); display: flex; gap: 20px; background: rgba(0,0,0,0.04); border-radius: 0 6px 6px 0; }
-
-        #output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        
-
-        .print-page { 
-            display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm; 
-            page-break-after: always; box-sizing: border-box; padding: 2mm 0;
-        }
-
-        .print-page:last-child { justify-content: flex-start !important; }
-        .print-page:last-child .planning-container { margin-bottom: 15px; }
-        
-        .print-header { 
-            display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto; 
-            padding-bottom: 3px; align-items: baseline; justify-content: space-between; 
-        }
-        .h-col-left { flex: 1; text-align: left; font-size: 1.1em; font-weight: bold; }
-        .h-col-center { flex: 1; text-align: center; font-size: 0.9em; }
-        .h-col-right { flex: 1; text-align: right; font-size: 0.7em; color: #444; }
-
-        .planning-container { width: 100%; page-break-inside: avoid; }
-        .planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; }
-        .planning-header-row { background-color: #f0f0f0 !important; font-size: 0.75em; font-weight: bold; -webkit-print-color-adjust: exact; }
-        .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 4px 1px; text-align: center; }
-        .planning-table th:first-child, .planning-table td:first-child { border-left: 1pt solid #000; }
-        .planning-table tr:first-child th { border-top: 1pt solid #000; }
-        
-        .jour-nom { font-size: 0.75em; color: #333; display: block; margin-bottom: 2px; }
-        .poste-valeur { font-weight: bold; font-size: 1.1em; display: block; }
-        .row-notes { height: 35px; background: #fff !important; }
-
-        @media print {
-            @page { margin: 0.5cm 0.7cm; size: portrait; }
-            body { background: white !important; padding: 0; margin: 0; }
-            .no-print { display: none !important; }
-            #output { padding: 0; box-shadow: none; border-radius: 0; }
-            .print-header { display: flex !important; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon Petit Planning</title>
+<script src="xlsx.full.min.js"></script>
+<style>
+:root {
+--bg-color: #f4f7f6; --card-bg: white; --text-color: #333; --border-color: #ddd; --accent-color: #0056b3; --drop-bg: #f8f9fa;
+--btn-theme-bg: #e9ecef; --btn-theme-text: #495057;
+}
+body.dark-mode {
+--bg-color: #1a1a1a; --card-bg: #2d2d2d; --text-color: #e0e0e0; --border-color: #444; --accent-color: #3d8bfd; --drop-bg: #383838;
+--btn-theme-bg: #3d3d3d; --btn-theme-text: #ced4da;
+}
+body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 10px auto; padding: 10px; background-color: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
+.no-print { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid transparent; }
+.header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.btn-theme {
+width: auto !important; background: var(--btn-theme-bg) !important; color: var(--btn-theme-text) !important;
+padding: 8px 16px; font-size: 0.85em; border: 1px solid var(--border-color); border-radius: 6px;
+cursor: pointer; font-weight: 500; transition: all 0.2s ease;
+}
+.drop-zone { border: 2px dashed var(--border-color); border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; background: var(--drop-bg); color: var(--text-color); transition: border-color 0.2s, background 0.2s; }
+.drop-zone.drag-over { border-color: var(--accent-color); background: rgba(0,86,179,0.06); }
+.hidden { display: none !important; }
+label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+select, input[type="date"], input[type="number"] { padding: 10px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
+body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(0.8); background-color: rgba(255,255,255,0.15); border-radius: 4px; padding: 2px; }
+button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+.btn-gen { background: #28a745; margin-top: 15px; }
+.btn-print { background: #0056b3; }
+.chk-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 8px 0; }
+.chk-label { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: normal; cursor: pointer; color: var(--text-color); }
+.sub-opts-box { margin: 2px 0 12px 25px; padding: 8px 15px; border-left: 2px solid var(--accent-color); display: flex; gap: 20px; background: rgba(0,0,0,0.04); border-radius: 0 6px 6px 0; }
+#output { background: white; padding: 20px; border-radius: 12px; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.print-page {
+display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm;
+page-break-after: always; box-sizing: border-box; padding: 2mm 0;
+}
+.print-page:last-child { justify-content: flex-start !important; }
+.print-page:last-child .planning-container { margin-bottom: 15px; }
+.print-header {
+display: none; border-bottom: 1.5pt solid #000; width: 98%; margin: 0 auto 10px auto;
+padding-bottom: 3px; align-items: baseline; justify-content: space-between;
+}
+.h-col-left { flex: 1; text-align: left; font-size: 1.1em; font-weight: bold; }
+.h-col-center { flex: 1; text-align: center; font-size: 0.9em; }
+.h-col-right { flex: 1; text-align: right; font-size: 0.7em; color: #444; }
+.planning-container { width: 100%; page-break-inside: avoid; }
+.planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; }
+.planning-header-row { background-color: #f0f0f0 !important; font-size: 0.75em; font-weight: bold; -webkit-print-color-adjust: exact; }
+.planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 4px 1px; text-align: center; }
+.planning-table th:first-child, .planning-table td:first-child { border-left: 1pt solid #000; }
+.planning-table tr:first-child th { border-top: 1pt solid #000; }
+.jour-nom { font-size: 0.75em; color: #333; display: block; margin-bottom: 2px; }
+.poste-valeur { font-weight: bold; font-size: 1.1em; display: block; }
+.row-notes { height: 35px; background: #fff !important; }
+@media print {
+@page { margin: 0.5cm 0.7cm; size: portrait; }
+body { background: white !important; padding: 0; margin: 0; }
+.no-print { display: none !important; }
+#output { padding: 0; box-shadow: none; border-radius: 0; }
+.print-header { display: flex !important; }
+}
+</style>
 </head>
 <body>
-
-    <div id="setup" class="no-print">
-        <div class="header-box">
-            <h2 style="margin:0">Mon Petit Planning</h2>
-            <button id="themeBtn" class="btn-theme" onclick="toggleDarkMode()">🌑 Mode Sombre</button>
-        </div>
-
-        <div id="dropZone" class="drop-zone">
-            <span id="dropText">📂 Cliquez ou glissez votre planning Excel ici</span>
-            <input type="file" id="fileInput" accept=".xlsx" class="hidden">
-        </div>
-
-        <div id="step2" class="hidden">
-            <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                <label>1. Qui êtes-vous ?</label>
-                <select id="userSelect" style="width: 100%;" onchange="initDates()"></select>
-                
-                <label>2. Période à extraire</label>
-                <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex: 2; min-width: 140px;">
-                        <span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Début (Lundi) :</span>
-                        <input type="date" id="dateStart" style="width: 100%; margin-top: 5px;" onchange="updateEndDate()">
-                    </div>
-                    <div style="flex: 1; min-width: 80px;">
-                        <span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Semaines :</span>
-                        <input type="number" id="nbWeeks" value="8" min="1" max="52" style="width: 100%; margin-top: 5px;" onchange="updateEndDate()">
-                    </div>
-                    <div style="flex: 2; min-width: 140px;">
-                        <span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Fin :</span>
-                        <input type="date" id="dateEnd" style="width: 100%; margin-top: 5px;">
-                    </div>
-                </div>
-
-                <label>3. Options d'affichage</label>
-                <div class="chk-group">
-                    <label class="chk-label"><input type="checkbox" id="chkShowTitle" checked onchange="handleMainTitleChange(); genererSiActif();"> Afficher le titre</label>
-                    <label class="chk-label"><input type="checkbox" id="chkShowPeriod" checked onchange="genererSiActif();"> Afficher la période</label>
-                    <label class="chk-label"><input type="checkbox" id="chkShowDate" checked onchange="genererSiActif();"> Date du fichier source</label>
-                </div>
-                <div id="subTitleBox" class="sub-opts-box">
-                    <label class="chk-label"><input type="checkbox" id="chkShowLast" checked onchange="handleSubClick(); genererSiActif();"> Nom</label>
-                    <label class="chk-label"><input type="checkbox" id="chkShowFirst" checked onchange="genererSiActif();"> Prénom</label>
-                </div>
-
-                <button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
-                <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer</button>
-                <button id="btnQR" class="btn-qr hidden" onclick="ouvrirQR()">📲 Envoyer vers mon agenda</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="output" class="hidden"></div>
-
-    <script>
-        let workbookData = null;
-        let fileDate = "";
-        const MOIS_LISTE = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-
-        let isGenerated = false;
-
-        loadDarkModePrefs();
-
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            const btn = document.getElementById('themeBtn');
-            btn.innerHTML = document.body.classList.contains('dark-mode') ? "☀️ Mode Clair" : "🌑 Mode Sombre";
-            savePrefs();
-        }
-
-        function savePrefs() {
-
-            const el = id => document.getElementById(id);
-            if (!el('chkShowTitle')) return;
-            try {
-                localStorage.setItem('planning_prefs', JSON.stringify({
-                    darkMode: document.body.classList.contains('dark-mode'),
-                    showTitle: el('chkShowTitle').checked,
-                    showPeriod: el('chkShowPeriod').checked,
-                    showDate: el('chkShowDate').checked,
-                    showLast: el('chkShowLast').checked,
-                    showFirst: el('chkShowFirst').checked
-                }));
-            } catch(e) {}
-        }
-
-        function loadDarkModePrefs() {
-            try {
-                const saved = localStorage.getItem('planning_prefs');
-                if (!saved) return;
-                const p = JSON.parse(saved);
-                if (p.darkMode) {
-                    document.body.classList.add('dark-mode');
-                    document.getElementById('themeBtn').innerHTML = "☀️ Mode Clair";
-                }
-            } catch(e) {}
-        }
-
-        function loadPrefs() {
-            try {
-                const saved = localStorage.getItem('planning_prefs');
-                if (!saved) return;
-                const p = JSON.parse(saved);
-                const el = id => document.getElementById(id);
-                if (!el('chkShowTitle')) return;
-                el('chkShowTitle').checked = p.showTitle !== false;
-                el('chkShowPeriod').checked = p.showPeriod !== false;
-                el('chkShowDate').checked = p.showDate !== false;
-                el('chkShowLast').checked = p.showLast !== false;
-                el('chkShowFirst').checked = p.showFirst !== false;
-                handleMainTitleChange();
-            } catch(e) {}
-        }
-
-        function handleMainTitleChange() {
-            const title = document.getElementById('chkShowTitle');
-            const box = document.getElementById('subTitleBox');
-            if (!title || !box) return;
-            box.classList.toggle('hidden', !title.checked);
-        }
-
-        function handleSubClick() {
-            const last = document.getElementById('chkShowLast');
-            const first = document.getElementById('chkShowFirst');
-            const title = document.getElementById('chkShowTitle');
-            if (!last || !first || !title) return;
-            if (!last.checked && !first.checked) {
-                title.checked = false;
-                handleMainTitleChange();
-            }
-        }
-
-        function genererSiActif() {
-            savePrefs();
-            if (isGenerated) genererPlanning();
-        }
-
-        function initDates() {
-            let today = new Date();
-            let day = today.getDay();
-            let diffToMonday = (day === 0) ? 1 : (day === 1) ? 0 : (8 - day);
-
-            let nextMonday = new Date(today);
-            nextMonday.setDate(today.getDate() + diffToMonday);
-
-            document.getElementById('dateStart').value = nextMonday.toISOString().split('T')[0];
-            updateEndDate();
-        }
-
-        function updateEndDate() {
-            const startVal = document.getElementById('dateStart').value;
-            const weeks = parseInt(document.getElementById('nbWeeks').value);
-            if (startVal && weeks) {
-
-                const [y, m, d] = startVal.split('-').map(Number);
-                let date = new Date(y, m - 1, d);
-                date.setDate(date.getDate() + (weeks * 7) - 1);
-
-                const pad = n => String(n).padStart(2, '0');
-                document.getElementById('dateEnd').value = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
-            }
-        }
-
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = (e) => { if (e.target.files.length) handleFile(e.target.files[0]); };
-
-        dropZone.addEventListener('dragover', e => {
-            e.preventDefault();
-            dropZone.classList.add('drag-over');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('drag-over');
-        });
-        dropZone.addEventListener('drop', e => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-        });
-
-        function handleFile(file) {
-            fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
-            document.getElementById('dropText').innerHTML = "<b>Fichier chargé :</b> " + file.name;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                workbookData = XLSX.read(data, {type: 'array', cellDates: true});
-                populateUsers();
-                loadPrefs();
-                document.getElementById('step2').classList.remove('hidden');
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function populateUsers() {
-            let names = new Set();
-            workbookData.SheetNames.forEach(s => {
-                if (MOIS_LISTE.some(m => s.toLowerCase().includes(m))) {
-                    const sheet = workbookData.Sheets[s];
-                    const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
-                    rows.forEach(r => {
-                        if (r[0] && r[0].toString().trim().length > 2) {
-                            const val = r[0].toString().trim();
-                            if (!["NOM", "AMBULANCIERS"].includes(val.toUpperCase())) names.add(val);
-                        }
-                    });
-                }
-            });
-            const select = document.getElementById('userSelect');
-            select.innerHTML = '<option value="">-- Sélectionnez votre nom --</option>';
-            Array.from(names).sort().forEach(n => {
-                const opt = document.createElement('option');
-                opt.value = n; opt.textContent = n;
-                select.appendChild(opt);
-            });
-        }
-
-        function genererPlanning() {
-            isGenerated = true;
-            const nomCible = document.getElementById('userSelect').value;
-
-            const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-            const start = parseLocalDate(document.getElementById('dateStart').value);
-            const end = parseLocalDate(document.getElementById('dateEnd').value);
-            if (!nomCible && (isNaN(start) || isNaN(end))) {
-                alert("Veuillez sélectionner votre nom et une période.");
-                return;
-            }
-            if (!nomCible) {
-                alert("Veuillez sélectionner votre nom dans la liste.");
-                return;
-            }
-            if (isNaN(start) || isNaN(end)) {
-                alert("Veuillez sélectionner une période valide.");
-                return;
-            }
-
-            let extractedData = [];
-            workbookData.SheetNames.forEach(sheetName => {
-                const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
-                if (moisIdx === -1) return;
-
-                const yearMatch = sheetName.match(/\d{4}/);
-                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-
-                const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
-
-                const JOURS_SEMAINE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
-                let dateRowIdx = data.findIndex(r => r && r.some(c => typeof c === 'string' && JOURS_SEMAINE.some(j => c.toLowerCase().startsWith(j))));
-                if (dateRowIdx === -1) return;
-
-                const userRow = data.find(r => r && r[0] && r[0].toString().trim() === nomCible);
-                if (userRow) {
-                    userRow.forEach((cell, colIdx) => {
-
-                        if (colIdx >= 8 && cell && cell.toString().trim() !== "") {
-                            let label = data[dateRowIdx][colIdx];
-                            let match = label ? label.toString().match(/\d+/) : null;
-                            if (match) {
-                                let dayNum = parseInt(match[0]);
-
-                                let adjustedMois = moisIdx;
-                                if (dayNum >= 24 && colIdx <= 14) {
-
-                                    adjustedMois = (moisIdx + 11) % 12;
-                                } else if (dayNum <= 7 && colIdx > 30) {
-
-                                    adjustedMois = (moisIdx + 1) % 12;
-                                }
-                                let adjustedYear = year;
-                                if (adjustedMois === 11 && moisIdx === 0) adjustedYear--;
-                                if (adjustedMois === 0 && moisIdx === 11) adjustedYear++;
-                                let d = new Date(adjustedYear, adjustedMois, dayNum);
-                                if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
-                            }
-                        }
-                    });
-                }
-            });
-            
-            extractedData.sort((a, b) => a.date - b.date);
-
-            const parts = nomCible.split(' ');
-            const nomPart = parts[0];
-            const prenomPart = parts.slice(1).join(' ');
-            let titreAffiche = 'Planning : ';
-            const showTitle = document.getElementById('chkShowTitle').checked;
-            if (showTitle && document.getElementById('chkShowLast').checked) titreAffiche += nomPart + ' ';
-            if (showTitle && document.getElementById('chkShowFirst').checked) titreAffiche += prenomPart;
-
-            renderPlanning(extractedData, titreAffiche, start, end);
-        }
-
-        function renderPlanning(data, nom, start, end) {
-            if (data.length === 0) {
-                alert("Aucune donnée trouvée pour cette période.");
-                return;
-            }
-
-            const msPerDay = 86400000;
-            const diffDays = (start.getDay() === 0) ? -6 : 1 - start.getDay();
-            let firstMonday = new Date(start.getTime() + diffDays * msPerDay);
-
-            const byDate = {};
-            data.forEach(d => {
-                const key = d.date.getFullYear() + '-' + d.date.getMonth() + '-' + d.date.getDate();
-                byDate[key] = d;
-            });
-
-            let weeks = [];
-            let cursor = new Date(firstMonday);
-            while (cursor <= end) {
-                let week = [];
-                for (let i = 0; i < 7; i++) {
-                    const day = new Date(cursor.getTime() + i * msPerDay);
-                    const key = day.getFullYear() + '-' + day.getMonth() + '-' + day.getDate();
-                    week.push(byDate[key] || { date: day, poste: null });
-                }
-                weeks.push(week);
-                cursor = new Date(cursor.getTime() + 7 * msPerDay);
-            }
-
-            const chunks = [];
-            for (let i = 0; i < weeks.length; i += 8) chunks.push(weeks.slice(i, i + 8));
-
-            let html = '';
-            chunks.forEach(chunk => {
-                html += `<div class="print-page">`;
-                const showPeriod = document.getElementById('chkShowPeriod').checked;
-                const showDate = document.getElementById('chkShowDate').checked;
-                const showTitleH = document.getElementById('chkShowTitle').checked;
-                html += `<div class="print-header">
-                            <div class="h-col-left">${showTitleH ? nom : ''}</div>
-                            <div class="h-col-center">${showPeriod ? 'Du ' + start.toLocaleDateString() + ' au ' + end.toLocaleDateString() : ''}</div>
-                            <div class="h-col-right">${showDate ? 'Source : ' + fileDate : ''}</div>
-                         </div>`;
-                
-                chunk.forEach(week => {
-                    let mon = week[0].date;
-                    let sun = week[6].date;
-
-                    html += `<div class="planning-container"><table class="planning-table">
-                        <thead><tr class="planning-header-row"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
-                        <tbody><tr>`;
-                    const nomsJours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-                    week.forEach((entry, i) => {
-                        const nomJ = nomsJours[i];
-                        html += `<td><span class="jour-nom">${nomJ} ${entry.date.getDate()}</span><span class="poste-valeur">${entry.poste ? entry.poste : '-'}</span></td>`;
-                    });
-                    html += `</tr><tr class="row-notes"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div>`;
-                });
-                html += `</div>`;
-            });
-            document.getElementById('output').innerHTML = html;
-            document.getElementById('output').classList.remove('hidden');
-            document.getElementById('btnPrintTop').classList.remove('hidden');
-            document.getElementById('btnQR').classList.remove('hidden');
-        }
-
-        async function ouvrirQR() {
-            const nomCible = document.getElementById('userSelect').value;
-            const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-            const startRaw = parseLocalDate(document.getElementById('dateStart').value);
-            const end = parseLocalDate(document.getElementById('dateEnd').value);
-            // Aligner sur le lundi de la semaine de début, comme renderPlanning
-            const diffToMon = startRaw.getDay() === 0 ? -6 : 1 - startRaw.getDay();
-            const start = new Date(startRaw.getTime() + diffToMon * 86400000);
-            const warn = document.getElementById('qrWarn');
-            const qrDiv = document.getElementById('qrcode');
-            const btnQR = document.getElementById('btnQR');
-            qrDiv.innerHTML = '';
-            warn.classList.add('hidden');
-            document.getElementById('modalQR').classList.add('open');
-            qrDiv.innerHTML = '<p style="color:var(--text-color); opacity:0.6; margin:20px 0;">Génération en cours…</p>';
-
-            const jours = [];
-            workbookData.SheetNames.forEach(sheetName => {
-                const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
-                if (moisIdx === -1) return;
-                const yearMatch = sheetName.match(/\d{4}/);
-                const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-                const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
-                const JOURS_SEMAINE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
-                let dateRowIdx = data.findIndex(r => r && r.some(c => typeof c === 'string' && JOURS_SEMAINE.some(j => c.toLowerCase().startsWith(j))));
-                if (dateRowIdx === -1) return;
-                const userRow = data.find(r => r && r[0] && r[0].toString().trim() === nomCible);
-                if (!userRow) return;
-                userRow.forEach((cell, colIdx) => {
-                    if (colIdx < 8 || !cell || cell.toString().trim() === '') return;
-                    const poste = cell.toString().trim();
-                    if (poste === '.RH') return;
-                    const label = data[dateRowIdx][colIdx];
-                    const match = label ? label.toString().match(/\d+/) : null;
-                    if (!match) return;
-                    const dayNum = parseInt(match[0]);
-                    let adjustedMois = moisIdx;
-                    if (dayNum >= 24 && colIdx <= 14) adjustedMois = (moisIdx + 11) % 12;
-                    else if (dayNum <= 7 && colIdx > 30) adjustedMois = (moisIdx + 1) % 12;
-                    let adjustedYear = year;
-                    if (adjustedMois === 11 && moisIdx === 0) adjustedYear--;
-                    if (adjustedMois === 0 && moisIdx === 11) adjustedYear++;
-                    const d = new Date(adjustedYear, adjustedMois, dayNum);
-                    if (d >= start && d <= end) jours.push({ date: d, poste });
-                });
-            });
-            jours.sort((a, b) => a.date - b.date);
-
-            const pad = n => String(n).padStart(2, '0');
-            const toYMD = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
-            const prenomAgent = nomCible.split(' ').slice(1).join(' ');
-            const eventsParam = jours.map(({date, poste}) => toYMD(date) + '|' + poste + (prenomAgent ? ' - ' + prenomAgent : '')).join(',');
-            const payload = 'AGENT:' + nomCible + '\n' + eventsParam;
-
-            try {
-                const resp = await fetch('https://monpetitplanning-ical.vincentzell.workers.dev/store', {
-                    method: 'POST',
-                    body: payload
-                });
-                if (!resp.ok) throw new Error('Erreur serveur');
-                const id = await resp.text();
-                const url = 'https://vincentzell.github.io/MonPetitPlanning/ical.html?id=' + id;
-                qrDiv.innerHTML = '';
-                const qrLink = document.createElement('a');
-                qrLink.href = url;
-                qrLink.target = '_blank';
-                qrLink.title = 'Ouvrir le lien';
-                qrDiv.appendChild(qrLink);
-                new QRCode(qrLink, { text: url, width: 256, height: 256, correctLevel: QRCode.CorrectLevel.L });
-            } catch(err) {
-                qrDiv.innerHTML = '';
-                warn.textContent = '⚠️ Impossible de générer le QR code. Vérifiez votre connexion internet et réessayez.';
-                warn.classList.remove('hidden');
-            }
-        }
-
-        function fermerQR() {
-            document.getElementById('modalQR').classList.remove('open');
-        }
-    </script>
-    <div id="modalQR" class="modal-overlay" onclick="if(event.target===this) fermerQR()">
-        <div class="modal-box">
-            <h3>Envoyer vers l'agenda</h3>
-            <p>Scannez avec votre téléphone pour importer tous vos postes dans votre agenda</p>
-            <div id="qrcode"></div>
-            <div id="qrWarn" class="modal-warn hidden"></div>
-            <button class="modal-close" onclick="fermerQR()">Fermer</button>
-        </div>
-    </div>
-
+<div id="setup" class="no-print">
+<div class="header-box">
+<h2 style="margin:0">Mon Petit Planning</h2>
+<button id="themeBtn" class="btn-theme" onclick="toggleDarkMode()">🌑 Mode Sombre</button>
+</div>
+<div id="dropZone" class="drop-zone">
+<span id="dropText">📂 Cliquez ou glissez votre planning Excel ici</span>
+<input type="file" id="fileInput" accept=".xlsx" class="hidden">
+</div>
+<div id="step2" class="hidden">
+<div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+<label>1. Qui êtes-vous ?</label>
+<select id="userSelect" style="width: 100%;" onchange="initDates()"></select>
+<label>2. Période à extraire</label>
+<div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+<div style="flex: 2; min-width: 140px;">
+<span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Début (Lundi) :</span>
+<input type="date" id="dateStart" style="width: 100%; margin-top: 5px;" onchange="updateEndDate()">
+</div>
+<div style="flex: 1; min-width: 80px;">
+<span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Semaines :</span>
+<input type="number" id="nbWeeks" value="8" min="1" max="52" style="width: 100%; margin-top: 5px;" onchange="updateEndDate()">
+</div>
+<div style="flex: 2; min-width: 140px;">
+<span style="font-size: 0.8em; color: var(--text-color); opacity: 0.8;">Fin :</span>
+<input type="date" id="dateEnd" style="width: 100%; margin-top: 5px;">
+</div>
+</div>
+<label>3. Options d'affichage</label>
+<div class="chk-group">
+<label class="chk-label"><input type="checkbox" id="chkShowTitle" checked onchange="handleMainTitleChange(); genererSiActif();"> Afficher le titre</label>
+<label class="chk-label"><input type="checkbox" id="chkShowPeriod" checked onchange="genererSiActif();"> Afficher la période</label>
+<label class="chk-label"><input type="checkbox" id="chkShowDate" checked onchange="genererSiActif();"> Date du fichier source</label>
+</div>
+<div id="subTitleBox" class="sub-opts-box">
+<label class="chk-label"><input type="checkbox" id="chkShowLast" checked onchange="handleSubClick(); genererSiActif();"> Nom</label>
+<label class="chk-label"><input type="checkbox" id="chkShowFirst" checked onchange="genererSiActif();"> Prénom</label>
+</div>
+<button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
+<button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer</button>
+</div>
+</div>
+</div>
+<div id="output" class="hidden"></div>
+<script>
+let workbookData = null;
+let fileDate = "";
+const MOIS_LISTE = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+let isGenerated = false;
+loadDarkModePrefs();
+function toggleDarkMode() {
+document.body.classList.toggle('dark-mode');
+const btn = document.getElementById('themeBtn');
+btn.innerHTML = document.body.classList.contains('dark-mode') ? "☀️ Mode Clair" : "🌑 Mode Sombre";
+savePrefs();
+}
+function savePrefs() {
+const el = id => document.getElementById(id);
+if (!el('chkShowTitle')) return;
+try {
+localStorage.setItem('planning_prefs', JSON.stringify({
+darkMode: document.body.classList.contains('dark-mode'),
+showTitle: el('chkShowTitle').checked,
+showPeriod: el('chkShowPeriod').checked,
+showDate: el('chkShowDate').checked,
+showLast: el('chkShowLast').checked,
+showFirst: el('chkShowFirst').checked
+}));
+} catch(e) {}
+}
+function loadDarkModePrefs() {
+try {
+const saved = localStorage.getItem('planning_prefs');
+if (!saved) return;
+const p = JSON.parse(saved);
+if (p.darkMode) {
+document.body.classList.add('dark-mode');
+document.getElementById('themeBtn').innerHTML = "☀️ Mode Clair";
+}
+} catch(e) {}
+}
+function loadPrefs() {
+try {
+const saved = localStorage.getItem('planning_prefs');
+if (!saved) return;
+const p = JSON.parse(saved);
+const el = id => document.getElementById(id);
+if (!el('chkShowTitle')) return;
+el('chkShowTitle').checked = p.showTitle !== false;
+el('chkShowPeriod').checked = p.showPeriod !== false;
+el('chkShowDate').checked = p.showDate !== false;
+el('chkShowLast').checked = p.showLast !== false;
+el('chkShowFirst').checked = p.showFirst !== false;
+handleMainTitleChange();
+} catch(e) {}
+}
+function handleMainTitleChange() {
+const title = document.getElementById('chkShowTitle');
+const box = document.getElementById('subTitleBox');
+if (!title || !box) return;
+box.classList.toggle('hidden', !title.checked);
+}
+function handleSubClick() {
+const last = document.getElementById('chkShowLast');
+const first = document.getElementById('chkShowFirst');
+const title = document.getElementById('chkShowTitle');
+if (!last || !first || !title) return;
+if (!last.checked && !first.checked) {
+title.checked = false;
+handleMainTitleChange();
+}
+}
+function genererSiActif() {
+savePrefs();
+if (isGenerated) genererPlanning();
+}
+function initDates() {
+let today = new Date();
+let day = today.getDay();
+let diffToMonday = (day === 0) ? 1 : (day === 1) ? 0 : (8 - day);
+let nextMonday = new Date(today);
+nextMonday.setDate(today.getDate() + diffToMonday);
+document.getElementById('dateStart').value = nextMonday.toISOString().split('T')[0];
+updateEndDate();
+}
+function updateEndDate() {
+const startVal = document.getElementById('dateStart').value;
+const weeks = parseInt(document.getElementById('nbWeeks').value);
+if (startVal && weeks) {
+const [y, m, d] = startVal.split('-').map(Number);
+let date = new Date(y, m - 1, d);
+date.setDate(date.getDate() + (weeks * 7) - 1);
+const pad = n => String(n).padStart(2, '0');
+document.getElementById('dateEnd').value = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+}
+}
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.onclick = () => fileInput.click();
+fileInput.onchange = (e) => { if (e.target.files.length) handleFile(e.target.files[0]); };
+dropZone.addEventListener('dragover', e => {
+e.preventDefault();
+dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => {
+dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', e => {
+e.preventDefault();
+dropZone.classList.remove('drag-over');
+if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+function handleFile(file) {
+fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
+document.getElementById('dropText').innerHTML = "<b>Fichier chargé :</b> " + file.name;
+const reader = new FileReader();
+reader.onload = (e) => {
+const data = new Uint8Array(e.target.result);
+workbookData = XLSX.read(data, {type: 'array', cellDates: true});
+populateUsers();
+loadPrefs();
+document.getElementById('step2').classList.remove('hidden');
+};
+reader.readAsArrayBuffer(file);
+}
+function populateUsers() {
+let names = new Set();
+workbookData.SheetNames.forEach(s => {
+if (MOIS_LISTE.some(m => s.toLowerCase().includes(m))) {
+const sheet = workbookData.Sheets[s];
+const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+rows.forEach(r => {
+if (r[0] && r[0].toString().trim().length > 2) {
+const val = r[0].toString().trim();
+if (!["NOM", "AMBULANCIERS"].includes(val.toUpperCase())) names.add(val);
+}
+});
+}
+});
+const select = document.getElementById('userSelect');
+select.innerHTML = '<option value="">-- Sélectionnez votre nom --</option>';
+Array.from(names).sort().forEach(n => {
+const opt = document.createElement('option');
+opt.value = n; opt.textContent = n;
+select.appendChild(opt);
+});
+}
+function genererPlanning() {
+isGenerated = true;
+const nomCible = document.getElementById('userSelect').value;
+const parseLocalDate = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const start = parseLocalDate(document.getElementById('dateStart').value);
+const end = parseLocalDate(document.getElementById('dateEnd').value);
+if (!nomCible && (isNaN(start) || isNaN(end))) {
+alert("Veuillez sélectionner votre nom et une période.");
+return;
+}
+if (!nomCible) {
+alert("Veuillez sélectionner votre nom dans la liste.");
+return;
+}
+if (isNaN(start) || isNaN(end)) {
+alert("Veuillez sélectionner une période valide.");
+return;
+}
+let extractedData = [];
+workbookData.SheetNames.forEach(sheetName => {
+const moisIdx = MOIS_LISTE.findIndex(m => sheetName.toLowerCase().includes(m));
+if (moisIdx === -1) return;
+const yearMatch = sheetName.match(/\d{4}/);
+const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+const data = XLSX.utils.sheet_to_json(workbookData.Sheets[sheetName], {header: 1});
+const JOURS_SEMAINE = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+let dateRowIdx = data.findIndex(r => r && r.some(c => typeof c === 'string' && JOURS_SEMAINE.some(j => c.toLowerCase().startsWith(j))));
+if (dateRowIdx === -1) return;
+const userRow = data.find(r => r && r[0] && r[0].toString().trim() === nomCible);
+if (userRow) {
+userRow.forEach((cell, colIdx) => {
+if (colIdx >= 8 && cell && cell.toString().trim() !== "") {
+let label = data[dateRowIdx][colIdx];
+let match = label ? label.toString().match(/\d+/) : null;
+if (match) {
+let dayNum = parseInt(match[0]);
+let adjustedMois = moisIdx;
+if (dayNum >= 24 && colIdx <= 14) {
+adjustedMois = (moisIdx + 11) % 12;
+} else if (dayNum <= 7 && colIdx > 30) {
+adjustedMois = (moisIdx + 1) % 12;
+}
+let adjustedYear = year;
+if (adjustedMois === 11 && moisIdx === 0) adjustedYear--;
+if (adjustedMois === 0 && moisIdx === 11) adjustedYear++;
+let d = new Date(adjustedYear, adjustedMois, dayNum);
+if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
+}
+}
+});
+}
+});
+extractedData.sort((a, b) => a.date - b.date);
+const parts = nomCible.split(' ');
+const nomPart = parts[0];
+const prenomPart = parts.slice(1).join(' ');
+let titreAffiche = 'Planning : ';
+const showTitle = document.getElementById('chkShowTitle').checked;
+if (showTitle && document.getElementById('chkShowLast').checked) titreAffiche += nomPart + ' ';
+if (showTitle && document.getElementById('chkShowFirst').checked) titreAffiche += prenomPart;
+renderPlanning(extractedData, titreAffiche, start, end);
+}
+function renderPlanning(data, nom, start, end) {
+if (data.length === 0) {
+alert("Aucune donnée trouvée pour cette période.");
+return;
+}
+const msPerDay = 86400000;
+const diffDays = (start.getDay() === 0) ? -6 : 1 - start.getDay();
+let firstMonday = new Date(start.getTime() + diffDays * msPerDay);
+const byDate = {};
+data.forEach(d => {
+const key = d.date.getFullYear() + '-' + d.date.getMonth() + '-' + d.date.getDate();
+byDate[key] = d;
+});
+let weeks = [];
+let cursor = new Date(firstMonday);
+while (cursor <= end) {
+let week = [];
+for (let i = 0; i < 7; i++) {
+const day = new Date(cursor.getTime() + i * msPerDay);
+const key = day.getFullYear() + '-' + day.getMonth() + '-' + day.getDate();
+week.push(byDate[key] || { date: day, poste: null });
+}
+weeks.push(week);
+cursor = new Date(cursor.getTime() + 7 * msPerDay);
+}
+const chunks = [];
+for (let i = 0; i < weeks.length; i += 8) chunks.push(weeks.slice(i, i + 8));
+let html = '';
+chunks.forEach(chunk => {
+html += `<div class="print-page">`;
+const showPeriod = document.getElementById('chkShowPeriod').checked;
+const showDate = document.getElementById('chkShowDate').checked;
+const showTitleH = document.getElementById('chkShowTitle').checked;
+html += `<div class="print-header">
+<div class="h-col-left">${showTitleH ? nom : ''}</div>
+<div class="h-col-center">${showPeriod ? 'Du ' + start.toLocaleDateString() + ' au ' + end.toLocaleDateString() : ''}</div>
+<div class="h-col-right">${showDate ? 'Source : ' + fileDate : ''}</div>
+</div>`;
+chunk.forEach(week => {
+let mon = week[0].date;
+let sun = week[6].date;
+html += `<div class="planning-container"><table class="planning-table">
+<thead><tr class="planning-header-row"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
+<tbody><tr>`;
+const nomsJours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+week.forEach((entry, i) => {
+const nomJ = nomsJours[i];
+html += `<td><span class="jour-nom">${nomJ} ${entry.date.getDate()}</span><span class="poste-valeur">${entry.poste ? entry.poste : '-'}</span></td>`;
+});
+html += `</tr><tr class="row-notes"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div>`;
+});
+html += `</div>`;
+});
+document.getElementById('output').innerHTML = html;
+document.getElementById('output').classList.remove('hidden');
+document.getElementById('btnPrintTop').classList.remove('hidden');
+}
+</script>
 </body>
 </html>
