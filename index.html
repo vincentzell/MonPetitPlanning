@@ -39,6 +39,9 @@ button { padding: 12px; margin: 5px 0; width: 100%; border: none; border-radius:
 display: flex; flex-direction: column; justify-content: space-between; height: 27.2cm;
 page-break-after: always; box-sizing: border-box; padding: 2mm 0;
 }
+.print-page.compact {
+height: 27.2cm;
+}
 .print-page:last-child { justify-content: flex-start !important; }
 .print-page:last-child .planning-container { margin-bottom: 15px; }
 .print-header {
@@ -50,19 +53,27 @@ padding-bottom: 3px; align-items: baseline; justify-content: space-between;
 .h-col-right { flex: 1; text-align: right; font-size: 0.7em; color: #444; }
 .planning-container { width: 100%; page-break-inside: avoid; }
 .planning-table { width: 98%; margin: 0 auto; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: white; color: black; }
-.planning-header-row { background-color: #f0f0f0 !important; font-size: 0.75em; font-weight: bold; -webkit-print-color-adjust: exact; }
+.planning-header-row { background-color: #f0f0f0 !important; font-size: 0.75em; font-weight: bold; -webkit-print-color-adjust: exact; color-adjust: exact; print-color-adjust: exact; }
 .planning-table th, .planning-table td { border-right: 1pt solid #000; border-bottom: 1pt solid #000; padding: 4px 1px; text-align: center; }
 .planning-table th:first-child, .planning-table td:first-child { border-left: 1pt solid #000; }
 .planning-table tr:first-child th { border-top: 1pt solid #000; }
 .jour-nom { font-size: 0.75em; color: #333; display: block; margin-bottom: 2px; }
 .poste-valeur { font-weight: bold; font-size: 1.1em; display: block; }
+.binome-name { font-size: 0.5em; color: #999; font-weight: normal; display: block; line-height: 1; }
 .row-notes { height: 35px; background: #fff !important; }
+.row-notes td { padding: 1px 0.5px; vertical-align: top; }
+.highlight-weekend { background-color: #d0d0d0 !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
+.highlight-holiday { background-color: #b0b0b0 !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
+.planning-header-row.no-highlight { background-color: white !important; border-bottom: 0.5pt solid #999 !important; }
 @media print {
-@page { margin: 0.5cm 0.7cm; size: portrait; }
+@page { margin: 0.4cm 0.5cm; size: portrait; }
 body { background: white !important; padding: 0; margin: 0; }
 .no-print { display: none !important; }
 #output { padding: 0; box-shadow: none; border-radius: 0; }
 .print-header { display: flex !important; }
+.binome-name { color: #888 !important; -webkit-print-color-adjust: exact; }
+.print-page { min-height: 27.2cm !important; max-height: 27.2cm !important; overflow: hidden; }
+.planning-container { page-break-inside: avoid; }
 }
 </style>
 </head>
@@ -100,10 +111,18 @@ body { background: white !important; padding: 0; margin: 0; }
 <label class="chk-label"><input type="checkbox" id="chkShowTitle" checked onchange="handleMainTitleChange(); genererSiActif();"> Afficher le titre</label>
 <label class="chk-label"><input type="checkbox" id="chkShowPeriod" checked onchange="genererSiActif();"> Afficher la période</label>
 <label class="chk-label"><input type="checkbox" id="chkShowDate" checked onchange="genererSiActif();"> Date du fichier source</label>
+<label class="chk-label"><input type="checkbox" id="chkShowBinome" checked onchange="genererSiActif();"> Afficher le binôme</label>
+<label class="chk-label"><input type="checkbox" id="chkShowNotes" checked onchange="genererSiActif();"> Ligne de notes</label>
 </div>
 <div id="subTitleBox" class="sub-opts-box">
 <label class="chk-label"><input type="checkbox" id="chkShowLast" checked onchange="handleSubClick(); genererSiActif();"> Nom</label>
 <label class="chk-label"><input type="checkbox" id="chkShowFirst" checked onchange="genererSiActif();"> Prénom</label>
+</div>
+<label>4. Surlignage</label>
+<div class="chk-group">
+<label class="chk-label"><input type="checkbox" id="chkHighlightWeekHeader" checked onchange="genererSiActif();"> Entête semaine</label>
+<label class="chk-label"><input type="checkbox" id="chkHighlightWeekend" onchange="genererSiActif();"> Week-ends travaillés</label>
+<label class="chk-label"><input type="checkbox" id="chkHighlightHoliday" onchange="genererSiActif();"> Jours fériés travaillés</label>
 </div>
 <button class="btn-gen" onclick="genererPlanning()">🗓️ Afficher le planning</button>
 <button id="btnPrintTop" class="btn-print hidden" onclick="window.print()">🖨️ Imprimer</button>
@@ -133,7 +152,12 @@ showTitle: el('chkShowTitle').checked,
 showPeriod: el('chkShowPeriod').checked,
 showDate: el('chkShowDate').checked,
 showLast: el('chkShowLast').checked,
-showFirst: el('chkShowFirst').checked
+showFirst: el('chkShowFirst').checked,
+showNotes: el('chkShowNotes').checked,
+showBinome: el('chkShowBinome').checked,
+highlightWeekHeader: el('chkHighlightWeekHeader').checked,
+highlightWeekend: el('chkHighlightWeekend').checked,
+highlightHoliday: el('chkHighlightHoliday').checked
 }));
 } catch(e) {}
 }
@@ -160,6 +184,11 @@ el('chkShowPeriod').checked = p.showPeriod !== false;
 el('chkShowDate').checked = p.showDate !== false;
 el('chkShowLast').checked = p.showLast !== false;
 el('chkShowFirst').checked = p.showFirst !== false;
+el('chkShowNotes').checked = p.showNotes !== false;
+el('chkShowBinome').checked = p.showBinome !== false;
+el('chkHighlightWeekHeader').checked = p.highlightWeekHeader !== false;
+el('chkHighlightWeekend').checked = p.highlightWeekend === true;
+el('chkHighlightHoliday').checked = p.highlightHoliday === true;
 handleMainTitleChange();
 } catch(e) {}
 }
@@ -220,6 +249,11 @@ dropZone.classList.remove('drag-over');
 if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
 function handleFile(file) {
+// Vérifier si c'est un raccourci .lnk
+if (file.name.toLowerCase().endsWith('.lnk')) {
+alert('⚠️ Vous avez sélectionné un raccourci (.lnk).\n\nVeuillez sélectionner le fichier Excel original.\n\nLe navigateur ne peut pas suivre les raccourcis pour des raisons de sécurité.');
+return;
+}
 fileDate = new Date(file.lastModified).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
 document.getElementById('dropText').innerHTML = "<b>Fichier chargé :</b> " + file.name;
 const reader = new FileReader();
@@ -241,7 +275,7 @@ const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
 rows.forEach(r => {
 if (r[0] && r[0].toString().trim().length > 2) {
 const val = r[0].toString().trim();
-if (!["NOM", "AMBULANCIERS"].includes(val.toUpperCase())) names.add(val);
+if (!["NOM"].includes(val.toUpperCase())) names.add(val);
 }
 });
 }
@@ -300,7 +334,11 @@ let adjustedYear = year;
 if (adjustedMois === 11 && moisIdx === 0) adjustedYear--;
 if (adjustedMois === 0 && moisIdx === 11) adjustedYear++;
 let d = new Date(adjustedYear, adjustedMois, dayNum);
-if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
+if (d >= start && d <= end) {
+const posteStr = cell.toString().trim();
+const binom = findBinomeForDay(data, colIdx, posteStr, nomCible);
+extractedData.push({ date: d, poste: cell, binome: binom });
+}
 }
 }
 });
@@ -308,13 +346,34 @@ if (d >= start && d <= end) extractedData.push({ date: d, poste: cell });
 });
 extractedData.sort((a, b) => a.date - b.date);
 const parts = nomCible.split(' ');
-const nomPart = parts[0];
-const prenomPart = parts.slice(1).join(' ');
+const nomPart = parts.slice(0, -1).join(' '); // Tout sauf le dernier
+const prenomPart = parts[parts.length - 1]; // Dernier mot = prénom
 let titreAffiche = 'Planning : ';
 const showTitle = document.getElementById('chkShowTitle').checked;
 if (showTitle && document.getElementById('chkShowLast').checked) titreAffiche += nomPart + ' ';
 if (showTitle && document.getElementById('chkShowFirst').checked) titreAffiche += prenomPart;
 renderPlanning(extractedData, titreAffiche, start, end);
+}
+
+function findBinomeForDay(sheetData, colIdx, amplitude, nomCible) {
+const amplitudesToCheck = ['J7', 'M4', 'S1'];
+if (!amplitudesToCheck.includes(amplitude)) {
+return null;
+}
+for (let rowIdx = 3; rowIdx < sheetData.length; rowIdx++) {
+const row = sheetData[rowIdx];
+if (!row || !row[0] || typeof row[0] !== 'string') continue;
+const nomEmploye = row[0].toString().trim();
+if (nomEmploye === nomCible) continue;
+if (nomEmploye.toUpperCase() === 'NOM') continue;
+const cellValue = row[colIdx];
+if (cellValue && cellValue.toString().trim() === amplitude) {
+const parts = nomEmploye.split(' ');
+const prenom = parts[parts.length - 1]; // Dernier mot = prénom
+return prenom;
+}
+}
+return null;
 }
 function renderPlanning(data, nom, start, end) {
 if (data.length === 0) {
@@ -336,16 +395,26 @@ let week = [];
 for (let i = 0; i < 7; i++) {
 const day = new Date(cursor.getTime() + i * msPerDay);
 const key = day.getFullYear() + '-' + day.getMonth() + '-' + day.getDate();
-week.push(byDate[key] || { date: day, poste: null });
+week.push(byDate[key] || { date: day, poste: null, binome: null });
 }
 weeks.push(week);
 cursor = new Date(cursor.getTime() + 7 * msPerDay);
 }
+
+const showBinome = document.getElementById('chkShowBinome').checked;
+const showNotes = document.getElementById('chkShowNotes').checked;
+const highlightWeekHeader = document.getElementById('chkHighlightWeekHeader').checked;
+const highlightWeekend = document.getElementById('chkHighlightWeekend').checked;
+const highlightHoliday = document.getElementById('chkHighlightHoliday').checked;
+
 const chunks = [];
-for (let i = 0; i < weeks.length; i += 8) chunks.push(weeks.slice(i, i + 8));
+const weeksPerPage = showNotes ? 8 : 12;
+for (let i = 0; i < weeks.length; i += weeksPerPage) chunks.push(weeks.slice(i, i + weeksPerPage));
+
 let html = '';
 chunks.forEach(chunk => {
-html += `<div class="print-page">`;
+const pageClass = showNotes ? '' : ' compact';
+html += `<div class="print-page${pageClass}">`;
 const showPeriod = document.getElementById('chkShowPeriod').checked;
 const showDate = document.getElementById('chkShowDate').checked;
 const showTitleH = document.getElementById('chkShowTitle').checked;
@@ -357,15 +426,39 @@ html += `<div class="print-header">
 chunk.forEach(week => {
 let mon = week[0].date;
 let sun = week[6].date;
+const headerClass = highlightWeekHeader ? 'planning-header-row' : 'planning-header-row no-highlight';
 html += `<div class="planning-container"><table class="planning-table">
-<thead><tr class="planning-header-row"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
+<thead><tr class="${headerClass}"><th colspan="7">Semaine du ${mon.toLocaleDateString()} au ${sun.toLocaleDateString()}</th></tr></thead>
 <tbody><tr>`;
 const nomsJours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 week.forEach((entry, i) => {
 const nomJ = nomsJours[i];
-html += `<td><span class="jour-nom">${nomJ} ${entry.date.getDate()}</span><span class="poste-valeur">${entry.poste ? entry.poste : '-'}</span></td>`;
+let posteHTML = '';
+let cellClass = '';
+const dayOfWeek = entry.date.getDay(); // 0=dimanche, 6=samedi
+
+if (entry.poste) {
+posteHTML = `<span class="poste-valeur">${entry.poste}</span>`;
+// Appliquer le highlight week-end (samedi/dimanche avec poste)
+if (highlightWeekend && (dayOfWeek === 6 || dayOfWeek === 0)) {
+cellClass = 'highlight-weekend';
+}
+// Appliquer le highlight jour férié travaillé (J7 en semaine)
+if (highlightHoliday && entry.poste.toString().trim() === 'J7' && dayOfWeek !== 6 && dayOfWeek !== 0) {
+cellClass = 'highlight-holiday';
+}
+} else {
+posteHTML = '-';
+}
+html += `<td class="${cellClass}"><span class="jour-nom">${nomJ} ${entry.date.getDate()}</span>${posteHTML}</td>`;
 });
-html += `</tr><tr class="row-notes"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table></div>`;
+html += `</tr>${showNotes ? '<tr class="row-notes">' + week.map((entry, i) => {
+let binomeCell = '';
+if (showBinome && entry.poste && entry.binome) {
+binomeCell = `<span class="binome-name">& ${entry.binome}</span>`;
+}
+return `<td>${binomeCell}</td>`;
+}).join('') + '</tr>' : ''}</tbody></table></div>`;
 });
 html += `</div>`;
 });
