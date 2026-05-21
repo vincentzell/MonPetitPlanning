@@ -16,12 +16,10 @@ Outil pour extraire et imprimer un planning individuel à partir d'un fichier Ex
 - Options d'affichage : titre, période, date source, binôme, ligne de notes
 - Surlignage des entêtes, week-ends travaillés, jours fériés travaillés
 
-## Dépendance
+## Fichiers requis
 
-SheetJS pour lire les fichiers `.xlsx` :
-```html
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-```
+- `index.html` : l'application
+- `xlsx.full.min.js` : dépendance SheetJS (doit être à la racine)
 
 ## Utilisation
 
@@ -40,5 +38,5 @@ SheetJS pour lire les fichiers `.xlsx` :
 
 ## Installation
 
-1. Placer `index.html` à la racine du repo
+1. Placer `index.html` et `xlsx.full.min.js` à la racine du repo
 2. Activer GitHub Pages dans Settings
