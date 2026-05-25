@@ -108,20 +108,18 @@ body { background: white !important; padding: 0; margin: 0; }
 </div>
 <label>3. Options d'affichage</label>
 <div class="chk-group">
-<label class="chk-label"><input type="checkbox" id="chkShowTitle" checked onchange="handleMainTitleChange(); genererSiActif(); toggleTitleDropdown();"> Afficher le titre ▼</label>
-<div id="subTitleBox" class="sub-opts-box" style="display: flex; width: 100%; margin-top: 8px;">
-<label style="font-size: 0.85em; font-weight: 600; margin-right: 10px;">Affichage :</label>
+<label class="chk-label"><input type="checkbox" id="chkShowTitle" checked onchange="handleMainTitleChange(); genererSiActif(); toggleTitleDropdown();"> Afficher le titre</label> <span onclick="document.getElementById('subTitleBox').style.display = document.getElementById('subTitleBox').style.display === 'none' ? 'inline-flex' : 'none';" style="cursor: pointer; margin-left: 8px;">▶</span>
+<span id="subTitleBox" style="display: none; margin-left: 8px; gap: 20px;">
 <label class="chk-label"><input type="checkbox" id="chkShowLast" onchange="handleSubClick(); genererSiActif();"> Nom</label>
 <label class="chk-label"><input type="checkbox" id="chkShowFirst" checked onchange="genererSiActif();"> Prénom</label>
-</div>
-<label class="chk-label"><input type="checkbox" id="chkShowPeriod" checked onchange="genererSiActif();"> Afficher la période</label>
-<label class="chk-label"><input type="checkbox" id="chkShowDate" checked onchange="genererSiActif();"> Date du fichier source</label>
-<label class="chk-label"><input type="checkbox" id="chkShowBinome" checked onchange="genererSiActif(); toggleBinomeDropdown();"> Afficher le binôme ▼</label>
-<div id="subBinomeBox" class="sub-opts-box" style="display: none; width: 100%; margin-top: 8px;">
-<label style="font-size: 0.85em; font-weight: 600; margin-right: 10px;">Taille du binôme :</label>
+</span>
+<label class="chk-label"><input type="checkbox" id="chkShowBinome" checked onchange="genererSiActif(); toggleBinomeDropdown();"> Afficher le binôme</label> <span onclick="document.getElementById('subBinomeBox').style.display = document.getElementById('subBinomeBox').style.display === 'none' ? 'inline-flex' : 'none';" style="cursor: pointer; margin-left: 8px;">▶</span>
+<span id="subBinomeBox" style="display: none; margin-left: 8px;">
 <label class="chk-label"><input type="radio" name="binomeSize" value="small" checked onchange="genererSiActif();"> Petit</label>
 <label class="chk-label"><input type="radio" name="binomeSize" value="large" onchange="genererSiActif();"> Grand</label>
-</div>
+</span>
+<label class="chk-label"><input type="checkbox" id="chkShowPeriod" checked onchange="genererSiActif();"> Afficher la période</label>
+<label class="chk-label"><input type="checkbox" id="chkShowDate" checked onchange="genererSiActif();"> Date du fichier source</label>
 <label class="chk-label"><input type="checkbox" id="chkShowNotes" checked onchange="genererSiActif();"> Ligne de notes</label>
 </div>
 <label>4. Surlignage</label>
